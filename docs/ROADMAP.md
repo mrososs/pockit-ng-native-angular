@@ -12,7 +12,7 @@ follows.
 | 4 | **Motion system and native animations** (done) | Motion tokens in the design system (the design's 90 to 280 ms, one curve, spring stiffness 400 damping 30); a press response on every pressable (the touch target never moves); a staggered entrance for Home, a lighter one for Collections and the empty state; native navigation untouched; reduced motion honoured; checked on an Android emulator. Gestures are documented, not built. | nothing: `Animated` and `AnimatedStyle` are in `@ng-native/components` |
 | 5 | **Gallery and image picker** (done) | Pick a photo from the library or take one. The design's add sheet. | `expo-image-picker` |
 | 6 | **Document picker and filesystem** (done) | Pick PDFs and files; decide copy-vs-reference; store files in app-owned storage. | `expo-document-picker`, `expo-file-system` |
-| 7 | Local persistence (SQLite) | Collection and document models, schema and migrations, `core/storage`; `VAULT_OVERVIEW` backed by it, which switches Home and Collections to their filled-in states with no screen change. Settle the multi-file document shape first. | `expo-sqlite` |
+| 7 | **Local persistence (SQLite)** (done) | Collection and document models, schema and migrations, `core/storage`; `VAULT_OVERVIEW` backed by it, which switches Home and Collections to their filled-in states with no screen change. Settle the multi-file document shape first. | `expo-sqlite` |
 | 8 | Search and favourites | Local search across the vault (the design's three search states); favourites and the Quick Access "See all". | |
 | 9 | Document viewer | Fullscreen image and PDF viewing with gestures, presented above the tabs. | |
 | 10 | **Biometrics and security** (lock built, out of turn; rest not started) | Lock on launch and resume (the design's lock screen), secure storage for the lock setting, the Settings screen, optional screenshot protection. | `expo-local-authentication`, `expo-secure-store`, maybe `expo-screen-capture` |
@@ -91,6 +91,38 @@ follows.
   reconcile, which surfaces as `Failed to download remote update` - a world away from the actual
   cause. Restarting the emulator (as happened earlier this session, under memory pressure) means
   redoing the port forward before the next device check.
+
+## Choices made in Phase 7
+
+- **One table, `document`.** No separate `collection` table yet: collections are still the
+  predefined list from `core/config`, so a document only needs a `collection_id` column pointing at
+  one of those ids. A real `collection` table arrives if and when custom collections do.
+- **`DocumentsRepository` is the only file that writes SQL.** `VaultStore` (the signal-based service
+  every feature actually talks to, following Phase 6's `VaultFiles` pattern) wraps it: an `overview`
+  signal, `refresh()`, and `save()` (insert then refresh). `VAULT_OVERVIEW`'s factory now reads
+  `VaultStore.overview` instead of a permanently-empty signal.
+- **`rowid DESC` breaks ties after `created_at DESC`.** Two saves inside the same millisecond are
+  real (a fast device, or a test), and SQLite's own implicit rowid is a free, always-increasing
+  tiebreaker: caught by a flaky test before it could be a flaky app.
+- **Route params don't reach a pushed screen's inputs with this router's outlet.** Verified directly
+  (a throwaway diagnostic test navigated past the add sheet entirely and `withComponentInputBinding`
+  still didn't populate a plain input), so Review's data arrives via a small shared service instead
+  (`AddDraftStore`, `set()`/`current()`/`clear()`), not route data. Resolver-based binding (as
+  `CollectionDetail` uses) is unaffected; only plain params are.
+- **Tested against a real SQL engine, not a hand-rolled fake.** `expo-sqlite` can't run under Node,
+  but Node's own built-in `node:sqlite` (`DatabaseSync`) can - `testing/sqlite.ts` wraps it in the
+  same async shape `PockitDatabase` expects, so a test exercises real SQL (real constraints, real
+  ordering) rather than a reimplementation of it.
+- **`VaultStore`'s constructor `refresh()` swallows its own rejection.** Without it, every test that
+  renders the app (not just this feature's own tests) would throw an unhandled rejection, since no
+  database exists under Node by default and nothing else awaits that first call.
+- **Device-verified**, including the stylus-handwriting tutorial overlay a stock Android emulator
+  shows the first time a text field is focused after a fresh AVD boot: it intercepts taps and typed
+  text meant for the app underneath. Disabling it once
+  (`adb shell settings put secure stylus_handwriting_enabled 0`) is more reliable than dismissing it
+  per-attempt. With it off: Camera → capture → Review (name field correctly starts empty, Phase
+  6/7's camera-title fix) → typed "National ID" → Save to Pockit → back on Home with "Personal
+  Documents" now showing "1 document".
 
 ## Choices made in Phase 10 (out of turn)
 

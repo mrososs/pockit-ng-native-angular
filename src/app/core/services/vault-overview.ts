@@ -1,13 +1,14 @@
-import { InjectionToken, type Signal, signal } from '@angular/core';
+import { InjectionToken, type Signal, inject } from '@angular/core';
 import type { CollectionId } from '../types/collection.ts';
 import type { DocumentPreview, ThumbnailSource } from '../types/document-preview.ts';
+import { VaultStore } from './vault-store.ts';
 
 /**
  * What the screens need to know about the vault's contents, and nothing more: how many documents
  * each collection holds, which are favourites, and what to peek at on a collection's card.
  *
- * It is a read-only view for presentation. The persistence phase replaces its provider with one
- * backed by the database; until then the default below is an empty vault, which is the truth.
+ * It is a read-only view for presentation. `VaultStore` is what computes it from the database
+ * (Phase 7); the default below is an empty vault, which is what a fresh database holds anyway.
  */
 export interface VaultOverview {
   readonly counts: Readonly<Record<CollectionId, number>>;
@@ -23,10 +24,14 @@ export const EMPTY_VAULT: VaultOverview = {
   peeks: {},
 };
 
-/** The vault the app is showing. Empty by default; tests and the dev preview provide another. */
+/**
+ * The vault the app is showing. `VaultStore`'s, by default; tests and the dev preview provide
+ * another. Not `VaultStore.overview` taken directly, so a screen that only reads the vault never
+ * has to know there is a store behind it, or inject something that can also write.
+ */
 export const VAULT_OVERVIEW = new InjectionToken<Signal<VaultOverview>>('VAULT_OVERVIEW', {
   providedIn: 'root',
-  factory: () => signal(EMPTY_VAULT).asReadonly(),
+  factory: () => inject(VaultStore).overview,
 });
 
 /** How many documents there are in all. */

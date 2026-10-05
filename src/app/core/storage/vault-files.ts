@@ -1,10 +1,12 @@
 import { Injectable, InjectionToken, inject } from '@angular/core';
 import { expoModule } from '@ng-native/expo';
 import { FileSystem } from '@ng-native/expo/file-system';
+import { generateId } from '../../shared/utils/id.ts';
 
-/** The slice of `expo-file-system`'s `File` this needs, to read a uri the app did not create. */
+/** The slice of `expo-file-system`'s `File` this needs, for a uri the app did not create itself. */
 export interface NativeSourceFile {
   bytes(): Promise<Uint8Array>;
+  delete(): void;
 }
 export interface NativeFileReader {
   open(uri: string): NativeSourceFile;
@@ -50,6 +52,11 @@ export class VaultFiles {
     this.fileSystem.write(file, bytes);
     return file.uri;
   }
+
+  /** Deletes a copy this made. For a draft the person backs out of before saving it. */
+  remove(uri: string): void {
+    this.reader?.open(uri).delete();
+  }
 }
 
 /** What a picker knows about a picked asset's name, for the extension alone. */
@@ -60,8 +67,7 @@ export interface VaultFileHint {
 
 /** A fresh name, so two copies never collide, keeping whatever extension the original had. */
 export function vaultFileName(hint: VaultFileHint): string {
-  const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-  return `${id}.${extensionOf(hint)}`;
+  return `${generateId()}.${extensionOf(hint)}`;
 }
 
 function extensionOf({ mimeType, originalName }: VaultFileHint): string {

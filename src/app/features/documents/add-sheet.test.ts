@@ -35,7 +35,7 @@ function fakeDocumentPicker(assets: readonly Partial<PickedDocument>[]) {
 
 /** A fake `expo-file-system`'s `File`, reading whatever bytes a test wants a uri to hold. */
 function fakeReader() {
-  return { open: () => ({ bytes: async () => new Uint8Array([1]) }) };
+  return { open: () => ({ bytes: async () => new Uint8Array([1]), delete: () => {} }) };
 }
 
 /** Lets a successful pick's copy into the vault succeed, so the sheet dismisses. */
@@ -144,7 +144,7 @@ describe('the add sheet, opened from the app', () => {
     expect(screen.getByRole('header', { name: 'Add to Pockit' })).toBeTruthy();
   });
 
-  test('a picked photo is copied into the vault and closes the sheet, the same as Cancel', async () => {
+  test('a picked photo is copied into the vault, then opens Review on top of the sheet', async () => {
     await renderApp({
       providers: [
         ...withWorkingVault,
@@ -156,12 +156,11 @@ describe('the add sheet, opened from the app', () => {
 
     await userEvent.press(screen.getByRole('button', { name: 'Photos, Choose from your gallery' }));
 
-    await waitFor(() =>
-      expect(screen.queryByRole('header', { name: 'Add to Pockit' })).toBeNull(),
-    );
+    await waitFor(() => expect(screen.getByRole('header', { name: 'Review' })).toBeTruthy());
+    expect(screen.getByRole('button', { name: 'Save to Pockit' })).toBeTruthy();
   });
 
-  test('a picked document is copied into the vault and closes the sheet', async () => {
+  test('a picked document is copied into the vault, then opens Review with its name suggested', async () => {
     await renderApp({
       providers: [
         ...withWorkingVault,
@@ -176,9 +175,8 @@ describe('the add sheet, opened from the app', () => {
 
     await userEvent.press(screen.getByRole('button', { name: 'Files, Choose PDF or document' }));
 
-    await waitFor(() =>
-      expect(screen.queryByRole('header', { name: 'Add to Pockit' })).toBeNull(),
-    );
+    await waitFor(() => expect(screen.getByRole('header', { name: 'Review' })).toBeTruthy());
+    expect(screen.getByDisplayValue('Birth Certificate')).toBeTruthy();
   });
 
   test('a copy that fails leaves the sheet open, even though the pick itself succeeded', async () => {

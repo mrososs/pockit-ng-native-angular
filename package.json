@@ -6,6 +6,7 @@
   "dependencies": {
     "@angular/common": "^22.0.0",
     "@angular/core": "^22.0.0",
+    "@angular/forms": "^22.2.0",
     "@angular/router": "22.2.0",
     "@ng-native/components": "0.1.2",
     "@ng-native/device": "0.1.2",
@@ -22,6 +23,7 @@
     "expo-image-picker": "~57.0.20",
     "expo-local-authentication": "~57.0.3",
     "expo-secure-store": "~57.0.4",
+    "expo-sqlite": "~57.0.3",
     "expo-status-bar": "~57.0.1",
     "expo-system-ui": "~57.0.4",
     "react": "19.2.3",

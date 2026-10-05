@@ -43,7 +43,8 @@
         {
           "faceIDPermission": "Pockit uses Face ID to confirm it's you before opening your vault."
         }
-      ]
+      ],
+      "expo-sqlite"
     ]
   }
 }

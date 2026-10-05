@@ -615,10 +615,10 @@ collection page all read that one list.
 
 What the vault *contains* is `VAULT_OVERVIEW` in `core/services/vault-overview.ts`: a read-only signal of
 how many documents each collection holds, the favourites, and the thumbnails a collection's large card
-peeks. It is a seam, not a repository: nothing is stored. Its default is an empty vault, which is the
-truth today, so the app starts in the design's "new user" Home. When documents exist (Phase 7) the
-persistence layer replaces its provider and the same screens switch to the design's filled-in Home with
-no change to them.
+peeks. It is a seam, not a repository: nothing is stored directly behind it. As of Phase 7 its factory
+reads `VaultStore.overview` (`core/services/vault-store.ts`), so Home and Collections switch to the
+design's filled-in states the moment a document is saved, with no change to either screen - the seam
+did its job.
 
 To look at the filled-in screens, a development build can start with a made-up vault from
 `src/app/preview`:
@@ -648,8 +648,14 @@ app must be fully usable offline, because it always is.
 Decided in Phase 6: a picked file is copied into app-owned storage, not referenced by its original
 URI. Copying keeps the vault independent of the gallery and of URIs that expire; referencing would
 have saved space, which the design's documents (photos, IDs, PDFs) are small enough not to need.
-`core/storage/vault-files.ts` (`VaultFiles`) does the copying. Phase 7's document model is what
-gives a copy a name and a row to be found by; until then it is made and not yet claimed.
+`core/storage/vault-files.ts` (`VaultFiles`) does the copying.
+
+Decided in Phase 7: the metadata side is one SQLite table, `document` (`core/storage/pockit-database.ts`
+holds the migration, `documents-repository.ts` the SQL). `DocumentsRepository` is the only file that
+writes SQL; `VaultStore` is what a feature actually injects (`overview`, `refresh()`, `save()`), the
+same shape as Phase 6's `VaultFiles`. A saved row is what finally claims a copy Phase 6 left unclaimed
+(see above): `Review.save()` calls `VaultStore.save()` with the collection id, file type and the vault
+URI `VaultFiles.copy()` already produced.
 
 Out of scope for the first version: any cloud storage, sync, REST API, Firebase, Supabase, NestJS or
 authentication API.
@@ -667,7 +673,7 @@ Not installed yet unless marked; each arrives in its own phase (see `ROADMAP.md`
 | Gallery and camera | `expo-image-picker` | 5, installed |
 | Documents and PDFs | `expo-document-picker` | 6, installed |
 | File storage | `expo-file-system` | 6, installed |
-| Local database | `expo-sqlite` | 7 |
+| Local database | `expo-sqlite` | 7, installed |
 | Haptics | `expo-haptics` | deferred from 4; with the first real action that wants one |
 | Biometric lock | `expo-local-authentication`, `expo-secure-store` | 10, installed |
 | Hide from screenshots and app switcher | `expo-screen-capture` | 10, if wanted |

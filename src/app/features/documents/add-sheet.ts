@@ -4,8 +4,11 @@ import { Pressable, SafeAreaView, Text, View } from '@ng-native/components';
 import { AnimatedStyle } from '@ng-native/components/animations';
 import { DocumentPicker } from '@ng-native/expo/document-picker';
 import { ImagePicker } from '@ng-native/expo/image-picker';
+import { NativeNavigation } from '@ng-native/router';
 import { VaultFiles } from '../../core/storage/vault-files.ts';
+import { fileTypeOf } from '../../core/types/document-item.ts';
 import { pressMotion } from '../../shared/motion/press-motion.ts';
+import { AddDraftStore } from './add-draft.ts';
 import { AddSourceRow } from './add-source-row.ts';
 
 type SourceId = 'camera' | 'photos' | 'files';
@@ -23,9 +26,9 @@ interface AddSource {
  * collection's empty state.
  *
  * All three of the design's sources pick something and copy it into the vault's own storage
- * (`VaultFiles`, Phase 6's copy-not-reference decision). The copy itself has nowhere to go yet:
- * there is no document model until Phase 7, so a successful pick simply closes the sheet, the same
- * as Cancel. A cancelled or refused picker, or a copy that fails, leaves the sheet open to try again.
+ * (`VaultFiles`, Phase 6's copy-not-reference decision), then `push` the Review screen on top of
+ * this one, where it is named, put in a collection, and saved (Phase 7). A cancelled or refused
+ * picker, or a copy that fails, leaves the sheet open to try again instead.
  */
 @Component({
   selector: 'app-add-sheet',
@@ -80,9 +83,11 @@ interface AddSource {
 })
 export class AddSheet {
   private readonly location = inject(Location);
+  private readonly nav = inject(NativeNavigation);
   private readonly imagePicker = inject(ImagePicker);
   private readonly documentPicker = inject(DocumentPicker);
   private readonly vaultFiles = inject(VaultFiles);
+  private readonly draft = inject(AddDraftStore);
 
   protected readonly sources: readonly AddSource[] = [
     { id: 'camera', icon: 'camera', title: 'Camera', subtitle: 'Take a photo' },
@@ -97,12 +102,21 @@ export class AddSheet {
     if (!picked) {
       return;
     }
+    let vaultUri: string;
     try {
-      await this.vaultFiles.copy(picked.uri, { mimeType: picked.mimeType, originalName: picked.originalName });
+      vaultUri = await this.vaultFiles.copy(picked.uri, {
+        mimeType: picked.mimeType,
+        originalName: picked.originalName,
+      });
     } catch {
       return; // The copy failed; stay open, the same as a cancelled picker.
     }
-    this.dismiss();
+    this.draft.set({
+      fileUri: vaultUri,
+      fileType: fileTypeOf(picked.mimeType),
+      suggestedTitle: titleOf(picked.originalName),
+    });
+    void this.nav.push(['/add-review']);
   }
 
   protected dismiss(): void {
@@ -114,10 +128,14 @@ export class AddSheet {
       const [file] = await this.documentPicker.pick({ type: '*/*' });
       return file ? { uri: file.uri, mimeType: file.mimeType, originalName: file.name } : null;
     }
-    const [asset] =
-      id === 'camera'
-        ? await this.imagePicker.capture()
-        : await this.imagePicker.pick({ mediaTypes: ['images'] });
+    if (id === 'camera') {
+      const [asset] = await this.imagePicker.capture();
+      // A fresh capture's `fileName` is the camera's own generated id, not a name a person chose
+      // or would recognise, so it is not carried through as Review's suggested title. The vault
+      // copy still gets the right extension, from the mime type instead.
+      return asset ? { uri: asset.uri, mimeType: asset.mimeType, originalName: null } : null;
+    }
+    const [asset] = await this.imagePicker.pick({ mediaTypes: ['images'] });
     return asset ? { uri: asset.uri, mimeType: asset.mimeType, originalName: asset.fileName } : null;
   }
 }
@@ -127,4 +145,9 @@ interface Picked {
   readonly uri: string;
   readonly mimeType?: string | null;
   readonly originalName?: string | null;
+}
+
+/** A name without its extension, for Review's name field. Empty if the picker gave none (the camera). */
+function titleOf(originalName: string | null | undefined): string {
+  return originalName?.replace(/\.[a-zA-Z0-9]+$/, '') ?? '';
 }

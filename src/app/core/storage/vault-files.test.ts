@@ -5,7 +5,9 @@ import { renderApp } from '../../testing/render.ts';
 import { VaultFiles, type NativeFileReader, vaultFileName } from './vault-files.ts';
 
 function fakeReader(bytesByUri: Record<string, Uint8Array>): NativeFileReader {
-  return { open: (uri) => ({ bytes: async () => bytesByUri[uri] ?? new Uint8Array() }) };
+  return {
+    open: (uri) => ({ bytes: async () => bytesByUri[uri] ?? new Uint8Array(), delete: () => {} }),
+  };
 }
 
 const SOURCE_URI = 'file://picked/source';
@@ -53,6 +55,22 @@ describe('VaultFiles', () => {
     await expect(componentRef.injector.get(VaultFiles).copy(SOURCE_URI)).rejects.toThrow(
       'expo-file-system is not installed',
     );
+  });
+
+  test('remove() deletes a copy, for a draft backed out of before saving', async () => {
+    const deleted: string[] = [];
+    const { componentRef } = await renderApp({
+      providers: [
+        {
+          provide: VaultFiles.SOURCE,
+          useValue: { open: (uri: string) => ({ bytes: async () => new Uint8Array(), delete: () => deleted.push(uri) }) },
+        },
+      ],
+    });
+
+    componentRef.injector.get(VaultFiles).remove('file://vault/abc.jpg');
+
+    expect(deleted).toEqual(['file://vault/abc.jpg']);
   });
 });
 
