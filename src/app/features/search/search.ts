@@ -3,6 +3,7 @@ import { Pressable, Text, TextInput, View } from '@ng-native/components';
 import { AnimatedStyle } from '@ng-native/components/animations';
 import { NativeNavigation } from '@ng-native/router';
 import { PREDEFINED_COLLECTIONS } from '../../core/config/predefined-collections.ts';
+import { DocumentViewerStore } from '../../core/services/document-viewer-store.ts';
 import { VAULT_OVERVIEW } from '../../core/services/vault-overview.ts';
 import type { CollectionDefinition } from '../../core/types/collection.ts';
 import type { DocumentPreview } from '../../core/types/document-preview.ts';
@@ -21,8 +22,7 @@ import { SearchResultRow } from './search-result-row.ts';
  *
  * With no query it offers the built-in collections as a shortcut, in place of the design's "Recent"
  * (a search history this app does not keep) and "Try searching" chips (the design's own sample
- * terms, not real data). A result row has nowhere to go yet (the document viewer is Phase 9), so it
- * presses but does nothing, the same as a document card elsewhere in the app today.
+ * terms, not real data).
  */
 @Component({
   selector: 'app-search',
@@ -93,7 +93,12 @@ import { SearchResultRow } from './search-result-row.ts';
         <text class="text-body-secondary count">{{ resultsLabel() }}</text>
         <view class="results">
           @for (item of results(); track item.id) {
-            <app-search-result-row [document]="item" [collectionName]="collectionNameOf(item)" [needle]="needle()" />
+            <app-search-result-row
+              [document]="item"
+              [collectionName]="collectionNameOf(item)"
+              [needle]="needle()"
+              (select)="openDocument(item)"
+            />
           }
         </view>
       } @else {
@@ -158,6 +163,7 @@ import { SearchResultRow } from './search-result-row.ts';
 export class Search {
   private readonly nav = inject(NativeNavigation);
   private readonly overview = inject(VAULT_OVERVIEW);
+  private readonly documentViewer = inject(DocumentViewerStore);
 
   protected readonly collections = PREDEFINED_COLLECTIONS;
   protected readonly query = signal('');
@@ -196,6 +202,10 @@ export class Search {
 
   protected openCollection(collection: CollectionDefinition): void {
     void this.nav.push(['/collections', collection.id]);
+  }
+
+  protected openDocument(item: DocumentPreview): void {
+    this.documentViewer.open(item);
   }
 
   /** The design's add sheet, as a native bottom sheet over whatever is on screen. */

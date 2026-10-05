@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { SafeAreaProvider } from '@ng-native/components';
+import { GestureRoot } from '@ng-native/components/gestures';
 import { StatusBar } from '@ng-native/device';
 import { NativeStackOutlet } from '@ng-native/router';
 import { AppLock } from './core/services/app-lock.ts';
@@ -19,17 +20,23 @@ import { LockScreen } from './features/settings/lock-screen.ts';
  * resume navigation cleanly, and starts the Home entrance over), and `LockScreen` is absolutely
  * positioned over it. Hiding the vault from a screenshot or the app switcher is `expo-screen-capture`
  * (`ARCHITECTURE.md`, section 11), a separate, optional step, not this screen's job.
+ *
+ * `<gesture-root>` wraps everything, as the library's own `GestureHandlerRootView` is wrapped: the
+ * document viewer (Phase 9) is the first screen with a `[gesture]` on it, and nothing recognises one
+ * outside this root.
  */
 @Component({
-  imports: [LockScreen, NativeStackOutlet, SafeAreaProvider],
+  imports: [GestureRoot, LockScreen, NativeStackOutlet, SafeAreaProvider],
   selector: 'app-root',
   template: `
-    <safe-area-provider class="fill">
-      <native-stack-outlet />
-      @if (lock.locked()) {
-        <app-lock-screen />
-      }
-    </safe-area-provider>
+    <gesture-root class="fill">
+      <safe-area-provider class="fill">
+        <native-stack-outlet />
+        @if (lock.locked()) {
+          <app-lock-screen />
+        }
+      </safe-area-provider>
+    </gesture-root>
   `,
   styles: `
     :host {

@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
 import { Pressable, Text, View } from '@ng-native/components';
 import { AnimatedStyle } from '@ng-native/components/animations';
 import type { DocumentPreview } from '../../core/types/document-preview.ts';
@@ -14,14 +14,19 @@ export interface TitleSegment {
 
 /**
  * One search result (screen 08): a wide thumbnail, the title with the matched substring in the
- * accent colour, and which collection it is in. Presses, but goes nowhere yet - the document
- * viewer it would open is Phase 9 - the same as a document card elsewhere in the app today.
+ * accent colour, and which collection it is in.
  */
 @Component({
   selector: 'app-search-result-row',
   imports: [AnimatedStyle, DocumentThumb, Icon, Pressable, Text, View],
   template: `
-    <pressable accessibilityRole="button" [accessibilityLabel]="document().title" (pressIn)="press.in()" (pressOut)="press.out()">
+    <pressable
+      accessibilityRole="button"
+      [accessibilityLabel]="document().title"
+      (pressIn)="press.in()"
+      (pressOut)="press.out()"
+      (press)="select.emit()"
+    >
       <view class="result" [animatedStyle]="press.style">
         <view class="thumb">
           <app-document-thumb [tone]="document().thumbnail.tone" [badge]="document().badge" />
@@ -84,6 +89,7 @@ export class SearchResultRow {
   readonly collectionName = input.required<string>();
   /** The query it matched, lower-cased: this is the only part that needs it. */
   readonly needle = input.required<string>();
+  readonly select = output<void>();
 
   protected readonly press = pressMotion('card');
 

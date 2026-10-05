@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { userEvent, waitFor, within } from '@ng-native/testing';
+import { screen, userEvent, waitFor, within } from '@ng-native/testing';
 import { describe, expect, test } from 'vitest';
 import { PREDEFINED_COLLECTIONS } from '../../core/config/predefined-collections.ts';
 import { VAULT_OVERVIEW } from '../../core/services/vault-overview.ts';
@@ -113,6 +113,21 @@ describe('Collection detail', () => {
       expect(detail.getByRole('button', { name: `${favorite.title}, ${favorite.kind}` })).toBeTruthy();
     }
     expect(detail.getByRole('button', { name: 'Add document' })).toBeTruthy();
+  });
+
+  test('opens a document in the grid in the document viewer', async () => {
+    const { fabric, componentRef } = await renderApp({
+      providers: [{ provide: VAULT_OVERVIEW, useValue: signal(PREVIEW_VAULT).asReadonly() }],
+    });
+
+    await componentRef.injector.get(Router).navigateByUrl('/collections/personal-documents');
+    await waitFor(() => expect(headerTitles(fabric.committed)).toContain('Personal Documents'));
+
+    await userEvent.press(
+      within(tabScreen(fabric, 'collections')).getByRole('button', { name: 'National ID, ID · Front & back' }),
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy());
   });
 
   test('has no collection with an id that a path could mistake for another route', () => {

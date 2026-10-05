@@ -34,9 +34,31 @@ const webAnimations = fileURLToPath(
   new URL('./node_modules/@ng-native/components/dist/animations-web.js', import.meta.url),
 );
 
+/**
+ * `ngNative()`'s own stand-ins for the gesture and Reanimated entry points (its `STAND_INS` table,
+ * `@ng-native/testing/vitest`) point at `@ng-native/testing/src/*.ts`, which this published version
+ * of the package does not ship - only the compiled `dist/*.js` they come from. Without this, a test
+ * that imports `@ng-native/components/gestures` or `/reanimated` (or the libraries themselves)
+ * fails before it runs, with "Cannot find module ... src/gestures.ts". Pointing the same four
+ * specifiers at the `dist` files the package does ship is the same fix as `webAnimations` above,
+ * for the same reason: a resolution gap in a dependency, worked around in the one place a test
+ * resolves modules from, not by touching `node_modules`.
+ */
+const testingDist = (name: string) =>
+  fileURLToPath(new URL(`./node_modules/@ng-native/testing/dist/${name}.js`, import.meta.url));
+
 // Compiles Angular for the tests the way Metro compiles it for the app. Tests run in Node against
 // a fake of the native side: no simulator, no device.
 export default defineConfig({
   plugins: [ngNative(), stubCompiledFontRequires()],
-  resolve: { alias: { '@ng-native/components/animations': webAnimations } },
+  resolve: {
+    alias: {
+      '@ng-native/components/animations': webAnimations,
+      '@ng-native/components/gestures': testingDist('gestures'),
+      'react-native-gesture-handler': testingDist('gesture-handler'),
+      '@ng-native/components/reanimated': testingDist('reanimated'),
+      'react-native-reanimated': testingDist('reanimated-library'),
+      'react-native-worklets': testingDist('worklets-library'),
+    },
+  },
 });

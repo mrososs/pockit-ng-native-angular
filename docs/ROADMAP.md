@@ -14,7 +14,7 @@ follows.
 | 6 | **Document picker and filesystem** (done) | Pick PDFs and files; decide copy-vs-reference; store files in app-owned storage. | `expo-document-picker`, `expo-file-system` |
 | 7 | **Local persistence (SQLite)** (done) | Collection and document models, schema and migrations, `core/storage`; `VAULT_OVERVIEW` backed by it, which switches Home and Collections to their filled-in states with no screen change. Settle the multi-file document shape first. | `expo-sqlite` |
 | 8 | **Search and favourites** (done) | Local search across the vault (the design's three search states); a collection's page showing its own documents; favourites and the Quick Access "See all". Marking a document a favourite is still Phase 9's (the action lives on the document viewer). | |
-| 9 | Document viewer | Fullscreen image and PDF viewing with gestures, presented above the tabs. | |
+| 9 | **Document viewer** (done) | Fullscreen image viewing with gestures (pinch, double tap, swipe down to close), presented above the tabs; favouriting and sharing, finally wired to the action everywhere a document card already pressed. A PDF opens the system share sheet instead of rendering in the app. | `react-native-reanimated`, `react-native-worklets`, `react-native-gesture-handler`, `expo-sharing` |
 | 10 | **Biometrics and security** (lock built, out of turn; rest not started) | Lock on launch and resume (the design's lock screen), secure storage for the lock setting, the Settings screen, optional screenshot protection. | `expo-local-authentication`, `expo-secure-store`, maybe `expo-screen-capture` |
 | 11 | Android production build | Final app identifier and signing, icons and splash, release build, store listing. | EAS configuration |
 
@@ -162,6 +162,59 @@ follows.
   typing a query down to the one real document Phase 7 saved on that emulator and its highlight,
   that document now showing on Personal Documents' own page instead of the empty state, and the
   floating add button above it.
+
+## Choices made in Phase 9
+
+Two decisions here were the user's, not a default: this phase shipped only after asking.
+
+- **No PDF viewer.** The one document ever actually saved and tested on a device is a photo; a real
+  in-app PDF render needs a new native dependency, and Android's `WebView` (unlike iOS's) cannot
+  render one on its own, so "PDF viewing" without that extra layer would be untested on the
+  platform this project actually checks against. A PDF document instead goes straight to the system
+  share sheet - the device's own "Open with" - which needed nothing new beyond `expo-sharing`, works
+  identically on both platforms, and was already the chosen way to share an image (below). Image
+  viewing, with the design's full pinch/double-tap/swipe-down gestures, was not simplified.
+- **Multi-page documents are still not built** (Review's own "one file per document" docstring,
+  unchanged since Phase 7), so the design's page dots, its second-page peek and its "N of M" caption
+  are not: a document never has a second page to show one for.
+- **Reanimated, worklets and Gesture Handler, finally installed** - the one thing Phase 4 deliberately
+  left for "the phase that clearly needs a per-frame value" (`ARCHITECTURE.md`, section 8). Built
+  exactly to that section's own seam: `@ng-native/components/gestures` and `/reanimated`, a gesture's
+  callbacks reading and writing `sharedValue`s through locals (never `this`, since a callback runs as
+  a worklet on the UI thread, where no component instance exists), a `[workletStyle]` turning those
+  into the image's transform and the screen's own dismiss-drag fade. `<gesture-root>` now wraps the
+  whole app (`app.ts`), the one place a `[gesture]` is recognised from.
+- **A real packaging gap in `@ng-native/testing@0.1.2`**, found getting a single test to import
+  `@ng-native/components/gestures`: the package's own Vitest plugin aliases that entry point (and
+  three others - the gesture library, Reanimated, and worklets) to `@ng-native/testing/src/*.ts`
+  files the published package does not ship, though the compiled `dist/*.js` they would have been
+  built from does exist and is a complete, well-made fake (`gestureOf`, a shared value as a signal,
+  a style that "finishes" the instant it is set). Worked around in `vitest.config.mts` with four
+  more `resolve.alias` entries pointing at the `dist` files directly - the same fix already there
+  for `@ng-native/components/animations`, for the same reason, not a patch to `node_modules`.
+- **Favouriting, finally wired.** `DocumentsRepository.setFavorite` (one `UPDATE`) and
+  `VaultStore.setFavorite(id, favorite)` - an explicit next value, not "the opposite of what a
+  possibly-stale `DocumentPreview` last said" - back every document card's press, everywhere one
+  already existed (Home, a collection's page, Favorites, a search result): `DocumentViewerStore`
+  decides where a tap goes, so no screen has its own copy of that decision. The viewer shows the
+  change at once (a local signal, set optimistically) rather than waiting on the write and a full
+  vault refresh.
+- **A new colour, `viewerGround` (`#0C0F10`)**: the viewer's ground is darker than the rest of the
+  app on purpose (the design's own choice, so a photo reads as the only thing on the screen), which
+  is a token in `theme.ts` like every other colour, not a one-off literal.
+- **One new icon, `share`**, rasterised the same way as every other (the design's own SVG path, a
+  white mask at 1x/2x/3x). `Edit` and `More`, the design's other two actions on this screen, are not
+  built: neither has anywhere to go yet (no editor, no menu), and an inert icon that only ever
+  presses and does nothing is the thing this project avoids building (`ARCHITECTURE.md`'s already
+  the plan for the collection page's own "more").
+- **Not yet device-verified.** The emulator and Metro were stopped by the harness's own
+  memory-pressure guard mid-way through Phase 8 and were never restarted this session; Phase 9 was
+  built and asked for by name regardless, per explicit instruction, with everything above covered by
+  the automated suite only (including the gestures themselves, driven directly through
+  `@ng-native/testing`'s `gestureOf`, not a finger). The next device pass should check: a real pinch
+  and double tap against the design's bounds, the swipe-down's feel (the fake "finishes" an
+  animation the instant it is set, which a spring on a device will not), the favourite heart and the
+  share sheet against the one real document in the vault, and a real PDF opening outside the app.
 
 ## Choices made in Phase 10 (out of turn)
 

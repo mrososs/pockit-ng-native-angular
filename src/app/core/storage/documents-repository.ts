@@ -77,4 +77,14 @@ export class DocumentsRepository {
     );
     return rows.map(fromRow);
   }
+
+  /** Sets whether a document is a favourite. The viewer's own action (Phase 9). */
+  async setFavorite(id: string, favorite: boolean): Promise<void> {
+    const db = await this.database.ready();
+    await db.runAsync('UPDATE document SET is_favorite = ?, updated_at = ? WHERE id = ?', [
+      favorite ? 1 : 0,
+      Date.now(),
+      id,
+    ]);
+  }
 }

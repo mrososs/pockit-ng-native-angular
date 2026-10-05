@@ -24,6 +24,8 @@ export const palette = {
   /** The native tab bar. */
   chrome: '#1A2023',
   divider: 'rgba(244, 238, 227, 0.08)',
+  /** The document viewer's own ground: darker, so a photo or a page reads as the only thing on it. */
+  viewerGround: '#0C0F10',
 
   // Text, from strongest to weakest.
   textPrimary: '#F4EEE3',
@@ -216,6 +218,19 @@ export const motion = {
       /** The round add action: small, so a hair more than a card, to read as much. */
       round: { scale: 0.96, recovery: 'spring' },
     },
+  },
+  /**
+   * The document viewer's own gestures (Phase 9): a pinch between these bounds, a double tap to
+   * the middle of them, and a vertical drag far enough to read as a dismissal rather than a
+   * wobble. Points, not a fraction of the screen: the design gives the gesture no distance of its
+   * own, so this is the press layer's own small-control distance, scaled up to something a thumb
+   * drags rather than taps.
+   */
+  viewer: {
+    minScale: 1,
+    maxScale: 4,
+    doubleTapScale: 2,
+    dismissDistance: 120,
   },
 } as const;
 

@@ -1,7 +1,9 @@
 import { Component, computed, inject } from '@angular/core';
 import { ScrollView, Text, View } from '@ng-native/components';
 import { NativeHeader, TabSafeAreaView } from '@ng-native/router';
+import { DocumentViewerStore } from '../../core/services/document-viewer-store.ts';
 import { VAULT_OVERVIEW } from '../../core/services/vault-overview.ts';
+import type { DocumentPreview } from '../../core/types/document-preview.ts';
 import { DocumentCard } from '../../shared/components/document-card/document-card.ts';
 import { EmptyState } from '../../shared/components/empty-state/empty-state.ts';
 import { chunk } from '../../shared/utils/chunk.ts';
@@ -10,8 +12,8 @@ import { chunk } from '../../shared/utils/chunk.ts';
  * The design's "Quick Access" page (screen 13): every favourite document, as the two-column grid a
  * collection's own page uses. Reached from Home's "See all", pushed on the Home tab's own stack.
  *
- * Nothing can make a document a favourite yet - that action lives on the document viewer (Phase 9),
- * which does not exist either - so this page is real but, today, always its own empty state.
+ * Marking a document a favourite is the document viewer's own action (Phase 9): tap a card here or
+ * anywhere else in the vault to open it, and favourite it from there.
  */
 @Component({
   selector: 'app-favorites',
@@ -29,7 +31,7 @@ import { chunk } from '../../shared/utils/chunk.ts';
                 <view class="pair">
                   @for (item of row; track item.id) {
                     <view class="half">
-                      <app-document-card [document]="item" />
+                      <app-document-card [document]="item" (open)="openDocument($event)" />
                     </view>
                   }
                   @if (row.length === 1) {
@@ -73,6 +75,7 @@ import { chunk } from '../../shared/utils/chunk.ts';
 })
 export class Favorites {
   private readonly overview = inject(VAULT_OVERVIEW);
+  private readonly documentViewer = inject(DocumentViewerStore);
 
   protected readonly favorites = computed(() => this.overview().favorites);
   protected readonly rows = computed(() => chunk(this.favorites(), 2));
@@ -80,4 +83,8 @@ export class Favorites {
     const count = this.favorites().length;
     return count === 1 ? '1 favorite document' : `${count} favorite documents`;
   });
+
+  protected openDocument(item: DocumentPreview): void {
+    this.documentViewer.open(item);
+  }
 }

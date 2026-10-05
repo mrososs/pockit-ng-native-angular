@@ -1,4 +1,5 @@
 import type { CollectionId } from './collection.ts';
+import type { DocumentFileType } from './document-item.ts';
 
 /**
  * What a thumbnail shows. Today only the design's placeholder artwork exists, named by its tone.
@@ -24,4 +25,7 @@ export interface DocumentPreview {
   readonly favorite: boolean;
   /** Which collection it belongs to: a search result's own line, a collection page's own grid. */
   readonly collectionId: CollectionId;
+  /** Where the real file is, and what kind it is: what the document viewer opens (Phase 9). */
+  readonly fileUri: string;
+  readonly fileType: DocumentFileType;
 }

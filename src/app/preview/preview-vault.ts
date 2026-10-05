@@ -16,6 +16,8 @@ const nationalId = {
   badge: '2 pages',
   favorite: true,
   collectionId: 'personal-documents',
+  fileUri: 'preview://national-id.jpg',
+  fileType: 'image',
 } as const;
 const drivingLicense = {
   id: 'preview-driving-license',
@@ -24,6 +26,8 @@ const drivingLicense = {
   thumbnail: { tone: 'teal' },
   favorite: true,
   collectionId: 'personal-documents',
+  fileUri: 'preview://driving-license.jpg',
+  fileType: 'image',
 } as const;
 const passport = {
   id: 'preview-passport',
@@ -32,6 +36,8 @@ const passport = {
   thumbnail: { tone: 'rose' },
   favorite: true,
   collectionId: 'personal-documents',
+  fileUri: 'preview://passport.jpg',
+  fileType: 'image',
 } as const;
 
 export const PREVIEW_VAULT: VaultOverview = {

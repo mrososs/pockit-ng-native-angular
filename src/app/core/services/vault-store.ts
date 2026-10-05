@@ -39,6 +39,12 @@ export class VaultStore {
     await this.refresh();
     return item;
   }
+
+  /** The viewer's own action (Phase 9): sets a document's favourite, then refreshes. */
+  async setFavorite(id: string, favorite: boolean): Promise<void> {
+    await this.repository.setFavorite(id, favorite);
+    await this.refresh();
+  }
 }
 
 function overviewOf(documents: readonly DocumentItem[]): VaultOverview {
@@ -77,6 +83,8 @@ function toPreview(item: DocumentItem, index: number): DocumentPreview {
     badge: item.fileType === 'pdf' ? 'PDF' : undefined,
     favorite: item.isFavorite,
     collectionId: item.collectionId,
+    fileUri: item.fileUri,
+    fileType: item.fileType,
   };
 }
 

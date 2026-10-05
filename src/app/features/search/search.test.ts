@@ -1,7 +1,8 @@
-import { signal } from '@angular/core';
+import { type Provider, signal } from '@angular/core';
 import { screen, userEvent, waitFor, within } from '@ng-native/testing';
 import { describe, expect, test } from 'vitest';
 import { PREDEFINED_COLLECTIONS } from '../../core/config/predefined-collections.ts';
+import { Sharing } from '../../core/services/sharing.ts';
 import { EMPTY_VAULT, VAULT_OVERVIEW, type VaultOverview } from '../../core/services/vault-overview.ts';
 import { selectTab, tabScreen } from '../../testing/navigation.ts';
 import { renderApp } from '../../testing/render.ts';
@@ -14,6 +15,8 @@ const nationalId = {
   thumbnail: { tone: 'indigo' },
   favorite: false,
   collectionId: 'personal-documents',
+  fileUri: 'file:///national-id.jpg',
+  fileType: 'image',
 } as const;
 const drivingLicense = {
   id: 'doc-driving-license',
@@ -22,6 +25,8 @@ const drivingLicense = {
   thumbnail: { tone: 'teal' },
   favorite: false,
   collectionId: 'personal-documents',
+  fileUri: 'file:///driving-license.jpg',
+  fileType: 'image',
 } as const;
 const workContract = {
   id: 'doc-work-contract',
@@ -30,6 +35,8 @@ const workContract = {
   thumbnail: { tone: 'paper' },
   favorite: false,
   collectionId: 'certificates',
+  fileUri: 'file:///work-contract.pdf',
+  fileType: 'pdf',
 } as const;
 
 const SEARCHABLE_VAULT: VaultOverview = {
@@ -39,7 +46,7 @@ const SEARCHABLE_VAULT: VaultOverview = {
 
 const withSearchableVault = { provide: VAULT_OVERVIEW, useValue: signal(SEARCHABLE_VAULT).asReadonly() };
 
-async function openSearchTab(providers: readonly (typeof withSearchableVault)[] = []) {
+async function openSearchTab(providers: readonly Provider[] = []) {
   const rendered = await renderApp({ providers });
   await selectTab(rendered.fabric, 'search');
   await waitFor(() =>
@@ -111,6 +118,36 @@ describe('Search, with a query', () => {
     await userEvent.press(tab().getByRole('button', { name: 'Cancel' }));
 
     await waitFor(() => expect(tab().getByRole('header', { name: 'Browse by collection' })).toBeTruthy());
+  });
+
+  test('opens an image result in the document viewer', async () => {
+    const { tab } = await openSearchTab([withSearchableVault]);
+
+    await userEvent.type(tab().getByDisplayValue(''), 'national');
+    await waitFor(() => expect(tab().getByRole('button', { name: 'National ID' })).toBeTruthy());
+
+    await userEvent.press(tab().getByRole('button', { name: 'National ID' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy());
+  });
+
+  test('a PDF result goes straight to the share sheet instead', async () => {
+    const shared: string[] = [];
+    const { tab } = await openSearchTab([
+      withSearchableVault,
+      {
+        provide: Sharing.SOURCE,
+        useValue: { isAvailableAsync: async () => true, shareAsync: async (uri: string) => void shared.push(uri) },
+      },
+    ]);
+
+    await userEvent.type(tab().getByDisplayValue(''), 'contract');
+    await waitFor(() => expect(tab().getByRole('button', { name: 'Work Contract' })).toBeTruthy());
+
+    await userEvent.press(tab().getByRole('button', { name: 'Work Contract' }));
+
+    await waitFor(() => expect(shared).toEqual([workContract.fileUri]));
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull();
   });
 });
 

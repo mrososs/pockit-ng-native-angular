@@ -1,8 +1,10 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { ScrollView, Text, View } from '@ng-native/components';
 import { NativeHeader, NativeNavigation, TabSafeAreaView } from '@ng-native/router';
+import { DocumentViewerStore } from '../../core/services/document-viewer-store.ts';
 import { VAULT_OVERVIEW } from '../../core/services/vault-overview.ts';
 import type { CollectionDefinition } from '../../core/types/collection.ts';
+import type { DocumentPreview } from '../../core/types/document-preview.ts';
 import { AddAction } from '../../shared/components/add-action/add-action.ts';
 import { DocumentCard } from '../../shared/components/document-card/document-card.ts';
 import { EmptyState } from '../../shared/components/empty-state/empty-state.ts';
@@ -41,7 +43,7 @@ import { chunk } from '../../shared/utils/chunk.ts';
                 <view class="pair">
                   @for (item of row; track item.id) {
                     <view class="half">
-                      <app-document-card [document]="item" />
+                      <app-document-card [document]="item" (open)="openDocument($event)" />
                     </view>
                   }
                   @if (row.length === 1) {
@@ -105,6 +107,7 @@ import { chunk } from '../../shared/utils/chunk.ts';
 export class CollectionDetail {
   private readonly nav = inject(NativeNavigation);
   private readonly overview = inject(VAULT_OVERVIEW);
+  private readonly documentViewer = inject(DocumentViewerStore);
 
   readonly collection = input.required<CollectionDefinition>();
 
@@ -116,6 +119,10 @@ export class CollectionDetail {
   );
   protected readonly rows = computed(() => chunk(this.documents(), 2));
   protected readonly countLabel = computed(() => documentCountLabel(this.documents().length));
+
+  protected openDocument(item: DocumentPreview): void {
+    this.documentViewer.open(item);
+  }
 
   /** The design's add sheet, as a native bottom sheet over whatever is on screen. */
   protected openAdd(): void {

@@ -4,8 +4,10 @@ import { Text, ScrollView, View } from '@ng-native/components';
 import { AnimatedStyle } from '@ng-native/components/animations';
 import { NativeNavigation } from '@ng-native/router';
 import { PREDEFINED_COLLECTIONS } from '../../core/config/predefined-collections.ts';
+import { DocumentViewerStore } from '../../core/services/document-viewer-store.ts';
 import { VAULT_OVERVIEW, totalDocuments } from '../../core/services/vault-overview.ts';
 import type { CollectionDefinition } from '../../core/types/collection.ts';
+import type { DocumentPreview } from '../../core/types/document-preview.ts';
 import { AddAction } from '../../shared/components/add-action/add-action.ts';
 import { Button } from '../../shared/components/button/button.ts';
 import { CollectionCard } from '../../shared/components/collection-card/collection-card.ts';
@@ -114,7 +116,7 @@ const HOME_ENTRANCE = { intro: 0, search: 1, lead: 2, rest: 3, quickAccess: 4, a
               <view class="quick-row">
                 @for (favorite of favorites(); track favorite.id) {
                   <view class="quick-card">
-                    <app-document-card [document]="favorite" />
+                    <app-document-card [document]="favorite" (open)="openDocument($event)" />
                   </view>
                 }
               </view>
@@ -268,6 +270,7 @@ export class Home {
   private readonly nav = inject(NativeNavigation);
   private readonly router = inject(Router);
   private readonly overview = inject(VAULT_OVERVIEW);
+  private readonly documentViewer = inject(DocumentViewerStore);
 
   /**
    * The entrance is six logical groups, not the dozens of elements on the screen, and each is a
@@ -315,6 +318,10 @@ export class Home {
   /** Quick Access's "See all": the same favourites, as the design's own page. */
   protected openFavorites(): void {
     void this.nav.push(['/home', 'favorites']);
+  }
+
+  protected openDocument(item: DocumentPreview): void {
+    this.documentViewer.open(item);
   }
 
   /** The design's add sheet, as a native bottom sheet over whatever is on screen. */

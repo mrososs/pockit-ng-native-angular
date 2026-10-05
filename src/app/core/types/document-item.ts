@@ -9,8 +9,8 @@ export type DocumentFileType = 'image' | 'pdf' | 'other';
 /**
  * A saved document: the vault's own record, not what a card needs to draw (`DocumentPreview` is
  * that half). One file per document today - a National ID's front and back, or any other
- * multi-page document, is Phase 9's "Add another page" and the design's multi-page screen; the
- * shape here does not yet have anywhere to put a second file.
+ * multi-page document, is the design's "Add another page" and multi-page screen, not yet scheduled
+ * to a phase; the shape here does not yet have anywhere to put a second file.
  */
 export interface DocumentItem {
   readonly id: string;

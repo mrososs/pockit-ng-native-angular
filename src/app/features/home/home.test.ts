@@ -91,6 +91,14 @@ describe('Home with documents', () => {
 
     await waitFor(() => expect(headerTitles(fabric.committed)).toContain('Quick Access'));
   });
+
+  test('opens a Quick Access card in the document viewer', async () => {
+    await renderApp({ providers: [withPreviewVault] });
+
+    await userEvent.press(screen.getByRole('button', { name: 'National ID, ID · Front & back' }));
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy());
+  });
 });
 
 describe('Home navigation', () => {

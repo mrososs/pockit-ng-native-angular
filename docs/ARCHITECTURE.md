@@ -304,6 +304,8 @@ reaching Android native crashes, so `Tabs` injects the engine and converts each 
 | Six collections, a "New collection" tile and a header "+" on Collections | Custom collections are not in scope | The three built-in collections only, and no tile or button that does nothing. They come with the feature. |
 | Search's "Recent" (a search history) and "Try searching" (sample terms) | Neither is real data: this app keeps no search history, and the terms are the design's own demo content | The built-in collections instead, as a browse-by shortcut, reusing `CollectionCard`'s `compact` row. |
 | Press: scale 0.97 with a spring, and a light haptic | Motion is built; haptics need a native module | Scale and fade with a spring or an ease, per role (section 8). No haptic yet: it comes with `expo-haptics`. |
+| A document viewer that renders PDFs in the app, with page dots for a multi-page one | No document has ever been tested as a PDF; Android's `WebView` cannot render one without another dependency; no document has a second page (Phase 7's shape holds one file) | A PDF opens the system share sheet instead (the user's own choice, Phase 9); the page dots are not built, since nothing ever has two pages to count. |
+| "Thumbnail expands to viewer, 320ms" (a shared-element transition) | `@ng-native/router` presents a new screen; it does not morph one view already on screen into another | The platform's own `fullScreenModal` transition (a slide up). The swipe-down *close* gesture, which the platform does not give a plain `fullScreenModal` either, is this screen's own (section 8). |
 
 ### What was checked, and how
 
@@ -366,9 +368,11 @@ single tap on its own buttons, and recurs on every new text field focus until th
 that shows it (`stylus_handwriting_enabled`) is turned off, after which it does not return. Not
 checked: iOS.
 
-**Phase 8 is not yet device-checked.** The emulator and Metro were stopped by the harness's own
-memory-pressure guard before this phase was built; the "Choices made in Phase 8" section of
-`ROADMAP.md` has what the next pass should look at.
+**Phase 8 and Phase 9 are not yet device-checked.** The emulator and Metro were stopped by the
+harness's own memory-pressure guard before Phase 8's screens were built, and were not restarted for
+either phase; each phase's own "Choices made" section in `ROADMAP.md` has what the next pass should
+look at - Phase 9's in particular, since its gestures are the first thing in the app a device can
+show that a Node test cannot: how a pinch and a swipe-down's spring actually feel.
 
 **Phase 10's lock, on the same emulator, with nothing enrolled:** the Settings row correctly reads
 `Biometrics.available()` as false and disables the switch with the explanatory line, rather than
@@ -586,22 +590,37 @@ justified, the rule is: a CSS `animation-timeline: scroll()` if opacity or trans
 native, free); a Reanimated `workletScroll` writing a `sharedValue` that a `workletStyle` reads if it
 needs logic; and never a signal written per scroll frame.
 
-### Gestures and Reanimated, later
+### Gestures and Reanimated
 
-Not installed, deliberately: `react-native-reanimated`, `react-native-worklets` and
-`react-native-gesture-handler` would put a Babel plugin on every file and a native module in every build,
-for nothing the app does yet. The seam is ready for them:
+Installed in Phase 9, the document viewer's pinch, double tap and swipe-down-to-close - the first
+thing the app does that needs a per-frame value, per this section's own original plan:
+`react-native-reanimated`, `react-native-worklets`, `react-native-gesture-handler`, with
+`babel.config.js` adding `react-native-worklets/plugin` (Reanimated 4 moved its transform there,
+from `react-native-reanimated/plugin`).
 
 - Ng Native's `@ng-native/components/gestures` and `/reanimated` are the integration. A gesture
-  (`pinch`, `pan`, a page swipe in the viewer, a bottom sheet's drag) writes a `sharedValue`, and a
-  `workletStyle` on the view reads it, so the finger never involves Angular per frame.
-- Add them in the phase that needs them (the document viewer's pinch and page swipe, Phase 9, is the
-  first that clearly does), with
-  `npx expo install react-native-reanimated react-native-worklets react-native-gesture-handler`, then
-  `npx expo install --check` and `npx expo-doctor`, then a cold export for both platforms. Those are
-  native modules: a development build needs them linked.
-- Take the springs and distances from `motion` so a gesture settles like a press does. `hygiene.test.ts`
-  fails if one of these packages is installed and nothing imports `@ng-native/components/reanimated`.
+  (`Gesture.Pinch()`, `.Pan()`, `.Tap()`, composed with `.Exclusive`/`.Simultaneous`) writes a
+  `sharedValue`, and a `workletStyle` on the view reads it, so the finger never involves Angular per
+  frame. `<gesture-root>` wraps the whole app (`app.ts`), once - the library's own
+  `GestureHandlerRootView`, wrapped the same way.
+- A gesture's callbacks run as worklets, on the UI thread, where no component instance exists: read
+  and write through locals captured before the gesture is built (`const scale = this.scale;` and the
+  like), never `this.scale` inside `.onUpdate()`/`.onEnd()` itself. Call back into Angular (closing
+  the viewer past the swipe-down's threshold) with `runOnJS` from `react-native-reanimated`, wrapping
+  a plain local closure that may read `this` freely, since it runs back on the JS thread.
+- Take the springs and distances from `motion` (`motion.viewer`: the zoom bounds, the double-tap
+  scale, the dismiss distance) so a gesture settles like a press does, and none of hygiene's
+  `scale: 0.xx` literal-number checks fire on a plain identifier. `hygiene.test.ts` fails if one of
+  these packages is installed and nothing imports `@ng-native/components/reanimated` (or `/gestures`
+  for Gesture Handler).
+- **A real gap in `@ng-native/testing@0.1.2`**: its own Vitest plugin aliases `@ng-native/components/
+  gestures`, `react-native-gesture-handler`, `@ng-native/components/reanimated`, `react-native-
+  reanimated` and `react-native-worklets` to `@ng-native/testing/src/*.ts`, which the published
+  package does not ship - only the compiled `dist/*.js` those files would have come from, which is a
+  complete fake (`gestureOf`, a shared value as a signal, a style that "finishes" the instant it is
+  set). `vitest.config.mts` points the same five specifiers at `dist` directly, the same fix already
+  there for `@ng-native/components/animations` and for the same reason: a resolution gap worked
+  around in the one place a test resolves modules, never by editing `node_modules`.
 
 ### In tests
 
@@ -610,6 +629,13 @@ Vitest, to Ng Native's own web variant (`vitest.config.mts`, the `webAnimations`
 `Animated` API on a JavaScript clock, writing the animated values into the fake tree as ordinary props.
 So a test can press a button and read the scale it settles at, and watch an entrance's groups arrive. What
 it cannot say is how smooth it is on a device or what the native driver does with it; that needs one.
+
+Gestures and worklets get the same kind of fake (above), and the same limit: `gestureOf(node,
+'Pinch').callbacks['onUpdate']!(event)` calls a callback directly, in place of a finger a native
+recogniser would have driven, and a `[workletStyle]` writes the style its worklet returns the
+instant a `sharedValue` it reads changes - `withTiming`/`withSpring` finish at once rather than
+animating. A test proves what a gesture's callbacks compute and clamp to, not how a pinch or a
+swipe-down's spring actually feels under a finger; that needs a device, same as motion does.
 
 ### Not done, and why
 
@@ -681,11 +707,12 @@ Not installed yet unless marked; each arrives in its own phase (see `ROADMAP.md`
 | Native stack and tab navigation | `@ng-native/router`, `react-native-screens` | 2, installed |
 | Custom fonts | `expo-font`, `@ng-native/expo` | 3, installed |
 | Motion | `Animated` with the native driver, through `AnimatedStyle` (part of `@ng-native/components`) | 4, done |
-| Gestures and per-frame motion | Reanimated worklets and Gesture Handler, when a gesture needs them | 6 to 9, first where one does |
+| Gestures and per-frame motion | `react-native-reanimated`, `react-native-worklets`, `react-native-gesture-handler` | 9, installed |
 | Gallery and camera | `expo-image-picker` | 5, installed |
 | Documents and PDFs | `expo-document-picker` | 6, installed |
 | File storage | `expo-file-system` | 6, installed |
 | Local database | `expo-sqlite` | 7, installed |
+| System share sheet | `expo-sharing` | 9, installed |
 | Haptics | `expo-haptics` | deferred from 4; with the first real action that wants one |
 | Biometric lock | `expo-local-authentication`, `expo-secure-store` | 10, installed |
 | Hide from screenshots and app switcher | `expo-screen-capture` | 10, if wanted |
@@ -793,25 +820,26 @@ feels right. That needs a device.
 
 ## 16. What is intentionally not implemented yet
 
-The add sheet picks a photo, a camera shot or any file, and copies it into the vault's own storage;
-it still goes nowhere a document model or a database can find it again. No SQLite, no persistence
-of any kind. No real search, favourites, document viewer or editing; no custom collections; no
-sharing. No encryption; no backend. The app can lock itself behind
-biometrics (Phase 10, out of turn), but nothing else of that phase: no screenshot protection, and
-Settings has only the one toggle, not the design's other groups (Appearance, Storage, About).
-Motion is limited to press feedback and screen entrances: no shared-element, scroll or gesture
-motion, and no haptics. The design's other screens (search, review, multi-page, viewer) are
-references for later phases.
+Persistence, search, favourites, a document viewer and sharing are all real now (Phases 7-9); what
+is still not built:
 
-### Data direction (not code)
+- **Multi-page documents.** A document is one file (`core/types/document-item.ts`'s own docstring);
+  Review's "Add another page" and the viewer's page dots and second-page peek have nowhere to read a
+  second file from. Custom collections are not in scope either - the three built-in ones only.
+- **Editing.** No document can be renamed, moved to another collection or deleted once saved; the
+  document viewer's "Edit" and "More" actions are not built, for the same reason a dead button never
+  is here - neither has an editor or a menu to open yet.
+- **A PDF viewer.** A PDF opens the system share sheet instead of rendering in the app (Phase 9's
+  "Where native differs from the design", section 7 of this file).
+- **No encryption; no backend; no accounts; no sync.** Section 10's local-first direction, unchanged.
+- **The rest of Phase 10.** The lock itself and its one Settings toggle are built, out of turn; no
+  screenshot protection, and Settings has only that one row, not the design's other groups
+  (Appearance, Storage, About).
+- **Haptics**, and any motion beyond press feedback, screen entrances and the document viewer's
+  gestures (Phase 9): no shared-element transition (the "thumbnail expands to viewer" row of the
+  table above), no scroll-linked motion.
+- **Android production build settings** (Phase 11): app identifiers, signing, real branding assets.
 
-Planned, not implemented. Names will be settled when the models are written (Phase 7).
-
-- **Collection**: `id`, `name`, `icon`, `createdAt`, `sortOrder`. (`CollectionDefinition` is its
-  presentation half.)
-- **DocumentItem**: `id`, `title`, `collectionId`, `fileType`, `fileUri`, `thumbnailUri`, `createdAt`,
-  `updatedAt`, `isFavorite`, `metadata`. (`DocumentPreview` is what a card needs.)
-- A document can have several files or pages (a National ID has a front and a back). When that is
-  designed, `fileType`, `fileUri` and `thumbnailUri` most likely move to a child record such as
-  `DocumentFile` with an order, and `DocumentItem` keeps the rest. Settle this before the database
-  schema, since it is expensive to change afterwards.
+The schema these phases settled is `core/storage/pockit-database.ts` (the `document` table) and
+`core/types/document-item.ts`/`document-preview.ts` (`DocumentItem`, the stored shape;
+`DocumentPreview`, what a card or the viewer needs) - not a plan here any more, the real thing.

@@ -1,5 +1,6 @@
 import type { Routes } from '@angular/router';
 import { COLLECTIONS_ROUTES } from './features/collections/collections.routes.ts';
+import { DOCUMENT_VIEWER_ROUTES } from './features/document-viewer/document-viewer.routes.ts';
 import { DOCUMENTS_ROUTES } from './features/documents/documents.routes.ts';
 import { HOME_ROUTES } from './features/home/home.routes.ts';
 import { SEARCH_ROUTES } from './features/search/search.routes.ts';
@@ -29,4 +30,5 @@ export const routes: Routes = [
     ],
   },
   ...DOCUMENTS_ROUTES,
+  ...DOCUMENT_VIEWER_ROUTES,
 ];

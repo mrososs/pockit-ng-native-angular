@@ -25,7 +25,7 @@ describe('VaultStore', () => {
     expect(overview().peeks.important).toEqual([{ tone: 'indigo' }]);
   });
 
-  test('a document is not a favourite until something makes it one (not yet built)', async () => {
+  test('a document is not a favourite until something makes it one', async () => {
     const { componentRef } = await renderApp({
       providers: [{ provide: POCKIT_DATABASE, useValue: fakeDatabase() }],
     });
@@ -39,6 +39,27 @@ describe('VaultStore', () => {
     });
 
     expect(componentRef.injector.get(VAULT_OVERVIEW)().favorites).toEqual([]);
+  });
+
+  test('setFavorite updates the document and is reflected in the overview', async () => {
+    const { componentRef } = await renderApp({
+      providers: [{ provide: POCKIT_DATABASE, useValue: fakeDatabase() }],
+    });
+    const store = componentRef.injector.get(VaultStore);
+
+    const saved = await store.save({
+      title: 'Passport',
+      collectionId: 'important',
+      fileType: 'image',
+      fileUri: 'file://vault/a.jpg',
+    });
+    expect(componentRef.injector.get(VAULT_OVERVIEW)().favorites).toEqual([]);
+
+    await store.setFavorite(saved.id, true);
+
+    expect(componentRef.injector.get(VAULT_OVERVIEW)().favorites.map((favorite) => favorite.id)).toEqual([
+      saved.id,
+    ]);
   });
 
   test('a database that fails to open leaves the vault empty rather than throwing', async () => {

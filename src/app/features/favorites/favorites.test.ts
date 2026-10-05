@@ -1,6 +1,6 @@
 import { signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { type FakeFabric, type FakeFabricNode, waitFor, within } from '@ng-native/testing';
+import { type FakeFabric, type FakeFabricNode, screen, userEvent, waitFor, within } from '@ng-native/testing';
 import { describe, expect, test } from 'vitest';
 import { VAULT_OVERVIEW } from '../../core/services/vault-overview.ts';
 import { PREVIEW_VAULT } from '../../preview/preview-vault.ts';
@@ -48,5 +48,19 @@ describe('Favorites', () => {
     for (const favorite of PREVIEW_VAULT.favorites) {
       expect(page.getByRole('button', { name: `${favorite.title}, ${favorite.kind}` })).toBeTruthy();
     }
+  });
+
+  test('opens a card in the document viewer', async () => {
+    const { fabric, componentRef } = await renderApp({
+      providers: [{ provide: VAULT_OVERVIEW, useValue: signal(PREVIEW_VAULT).asReadonly() }],
+    });
+    await componentRef.injector.get(Router).navigateByUrl('/home/favorites');
+    await waitFor(() => expect(headerTitles(fabric.committed)).toContain('Quick Access'));
+
+    await userEvent.press(
+      within(favoritesScreen(fabric)).getByRole('button', { name: 'National ID, ID · Front & back' }),
+    );
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy());
   });
 });

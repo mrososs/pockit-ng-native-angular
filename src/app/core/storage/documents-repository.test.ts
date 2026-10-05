@@ -43,4 +43,23 @@ describe('DocumentsRepository', () => {
 
     expect(await componentRef.injector.get(DocumentsRepository).list()).toEqual([]);
   });
+
+  test('sets a document favourite, and back again', async () => {
+    const { componentRef } = await renderApp({
+      providers: [{ provide: POCKIT_DATABASE, useValue: fakeDatabase() }],
+    });
+    const repository = componentRef.injector.get(DocumentsRepository);
+    const document = await repository.insert({
+      title: 'Passport',
+      collectionId: 'personal-documents',
+      fileType: 'image',
+      fileUri: 'file://vault/a.jpg',
+    });
+
+    await repository.setFavorite(document.id, true);
+    expect((await repository.list())[0]).toMatchObject({ id: document.id, isFavorite: true });
+
+    await repository.setFavorite(document.id, false);
+    expect((await repository.list())[0]).toMatchObject({ id: document.id, isFavorite: false });
+  });
 });
