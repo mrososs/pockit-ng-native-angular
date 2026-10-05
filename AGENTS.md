@@ -75,3 +75,46 @@ change; both are fast.
 `getByText` or `getByTestId` (which matches `nativeID` and `testID`), and act with
 `userEvent.setup().press(...)` or `.type(...)`, all from `@ng-native/testing`. Tests run in Node
 with no simulator, so write one alongside a change.
+
+## Pockit conventions
+
+This project's own rules, on top of the ones above. The reasoning is in `docs/ARCHITECTURE.md`.
+
+- **Layers.** `features` import `shared` and `core`; `shared` imports `core`; `shell` composes the
+  features. A feature never imports another feature, and exposes only its routes
+  (`<name>.routes.ts`).
+- **The design is Claude Design's "Pockit · Mobile Design v1".** Match it; do not restyle it. The
+  design system is `src/app/shared/theme/theme.ts` and nothing else: change a colour, size or type
+  style there, run `npm run theme`, and commit the regenerated `global.css`. Never edit `global.css`
+  by hand: `theme.test.ts` fails if it is out of date.
+- **No literal colours, spacing, radii or fonts in a component.** Use the global stylesheet, which
+  every component sees without importing it: `var(--color-text-primary)`, `var(--space-lg)`,
+  `var(--radius-lg)`, `var(--size-control)`, and the type classes (`class="text-body"`,
+  `text-title`, ...), softened with `text-tertiary` or `text-secondary`, or tinted with `text-collection`.
+  `hygiene.test.ts` fails on a literal colour or font family in a component.
+- **A collection's accent comes from the cascade.** Put `.collection-<id>` on the element, then read
+  `var(--collection-accent)`, `--collection-tint` and `--collection-surface` inside it. Icons take
+  their colour from `--icon-color`.
+- **A routed page** takes `host: { class: 'screen' }` (a screen paints nothing by itself). The first
+  page of a tab is an `<app-tab-screen>`, which owns the status-bar and tab-bar insets and has no
+  native header. A pushed page declares its own `<native-header>`, which owns the top inset, and
+  wraps its body in `<tab-safe-area-view [edges]="['bottom']">`. Never hardcode the tab bar's height.
+- **Collections** are `PREDEFINED_COLLECTIONS` in `core/config`; their counts and the favourites
+  come from `VAULT_OVERVIEW`, which is empty until the persistence phase. Demo data lives only in
+  `src/app/preview` and reaches the app only through the dev-preview switch in `app.config.ts`.
+- **A new tab** is a route under `Tabs` in `app.routes.ts`, an entry in `TABS` in `shell/tabs.ts` (an
+  SF Symbol and an Android PNG in `assets/icons`), and its path in `app.test.ts`.
+- **Dependencies** are added in the phase that needs them (`docs/ROADMAP.md`). Install Expo modules
+  with `npx expo install`, and keep every `@angular/*` package on one version.
+- **Motion lives in `shared/motion` and its numbers in `theme.ts` (`motion`).** A pressable calls
+  `pressMotion(role)` and binds `(pressIn)="press.in()" (pressOut)="press.out()"`, with
+  `[animatedStyle]="press.style"` on the view *inside* it, never on the pressable. A screen's entrance
+  is `enterMotion(groups, 'full' | 'light')`, one animated wrapper per logical group. Animate
+  `transform` and `opacity` only, with the native driver; never sequence with `setTimeout`, never write a
+  signal per scroll frame, and never put a duration, curve or scale in a component or a stylesheet.
+  Native navigation (stack, tabs, header, back) is the platform's: do not wrap or re-time it. Reanimated
+  and Gesture Handler are not installed; add them only for a per-frame gesture (see
+  `docs/ARCHITECTURE.md`, section 8). `hygiene.test.ts` enforces the rules above.
+- **Tests** render with `renderApp()` or `renderThemed()` from `src/app/testing/render.ts`, which pass
+  the global stylesheet as the app does. A test that calls `registerPlatformComponents('android')`
+  goes in a file of its own: it changes process-wide state.

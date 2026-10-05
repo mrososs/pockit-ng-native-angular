@@ -1,62 +1,54 @@
-import { Component, signal } from '@angular/core';
-import { Pressable, SafeAreaView, Text, View } from '@ng-native/components';
+import { Component, inject } from '@angular/core';
+import { SafeAreaProvider } from '@ng-native/components';
+import { StatusBar } from '@ng-native/device';
+import { NativeStackOutlet } from '@ng-native/router';
+import { AppLock } from './core/services/app-lock.ts';
+import { LockScreen } from './features/settings/lock-screen.ts';
 
 /**
- * Element names are lowercase, and that is load-bearing rather than style: an uppercase name is
- * read as an unknown Angular component and commits as a plain view with nothing in it.
+ * The root component, mounted by `src/main.ts`: the safe-area insets and the root native stack,
+ * whose first screen is the tab bar (`app.routes.ts`).
+ *
+ * The design tokens, the type scale and the fonts are not here: they are the global stylesheet
+ * (`shared/theme/global.css`), which `main.ts` passes to `mount()` and which every component sees.
+ * `<safe-area-provider>` measures the insets once, here: without it every `<safe-area-view>` below
+ * reads zero and content slides under the notch.
+ *
+ * While `AppLock.locked()` is true, the lock screen covers the stack rather than replacing it: the
+ * stack stays mounted underneath (tearing down and recreating `<native-stack-outlet>` does not
+ * resume navigation cleanly, and starts the Home entrance over), and `LockScreen` is absolutely
+ * positioned over it. Hiding the vault from a screenshot or the app switcher is `expo-screen-capture`
+ * (`ARCHITECTURE.md`, section 11), a separate, optional step, not this screen's job.
  */
 @Component({
-  imports: [Pressable, SafeAreaView, Text, View],
+  imports: [LockScreen, NativeStackOutlet, SafeAreaProvider],
   selector: 'app-root',
   template: `
-    <safe-area-view class="screen">
-      <view class="body">
-        <text class="title">Angular, natively</text>
-        <text class="hint">Real native views. React is never in the render path.</text>
-
-        <pressable accessibilityRole="button" class="button" (press)="count.set(count() + 1)">
-          <text class="label">Tapped {{ count() }} times</text>
-        </pressable>
-      </view>
-    </safe-area-view>
+    <safe-area-provider class="fill">
+      <native-stack-outlet />
+      @if (lock.locked()) {
+        <app-lock-screen />
+      }
+    </safe-area-provider>
   `,
   styles: `
     :host {
       flex: 1;
+      /* Text inherits this, so a <text> with no colour of its own is not black on black. */
+      color: var(--color-text-primary);
     }
-    .screen {
+    /* The root host is not a native view, so the app background is painted on this one. */
+    .fill {
       flex: 1;
-      background-color: #101014;
-    }
-    .body {
-      flex: 1;
-      justify-content: center;
-      gap: 12px;
-      padding: 24px;
-    }
-    .title {
-      color: #ffffff;
-      font-size: 28px;
-      font-weight: 700;
-    }
-    .hint {
-      color: #8b8b96;
-      font-size: 15px;
-    }
-    .button {
-      align-items: center;
-      margin-top: 8px;
-      padding: 14px;
-      border-radius: 10px;
-      background-color: #3b6ef5;
-    }
-    .label {
-      color: #ffffff;
-      font-size: 16px;
-      font-weight: 600;
+      background-color: var(--color-background);
     }
   `,
 })
 export class App {
-  protected readonly count = signal(0);
+  protected readonly lock = inject(AppLock);
+
+  constructor() {
+    // The interface is dark, so the status bar draws light content. A light theme makes it 'auto'.
+    inject(StatusBar).set({ style: 'light' });
+  }
 }

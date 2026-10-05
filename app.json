@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "my-app",
-    "slug": "my-app",
+    "name": "Pockit",
+    "slug": "pockit",
     "version": "1.0.0",
     "platforms": [
       "ios",
@@ -22,14 +22,28 @@
       },
       "predictiveBackGestureEnabled": false
     },
-    "scheme": "myapp",
+    "scheme": "pockit",
     "extra": {
       "router": {
         "root": "src/app"
       }
     },
     "plugins": [
-      "@ng-native/metro"
+      "@ng-native/metro",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Pockit uses your photos to add them to your vault.",
+          "cameraPermission": "Pockit uses your camera to take photos of your documents."
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Pockit uses Face ID to confirm it's you before opening your vault."
+        }
+      ]
     ]
   }
 }
