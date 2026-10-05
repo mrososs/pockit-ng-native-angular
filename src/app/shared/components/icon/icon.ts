@@ -12,6 +12,7 @@ export type IconName =
   | 'heart'
   | 'camera'
   | 'photos'
+  | 'files'
   | 'face'
   | 'logo';
 
@@ -26,6 +27,7 @@ const SOURCES: Record<IconName, ImageSource> = {
   heart: require('../../../../../assets/icons/heart.png'),
   camera: require('../../../../../assets/icons/camera.png'),
   photos: require('../../../../../assets/icons/photos.png'),
+  files: require('../../../../../assets/icons/files.png'),
   face: require('../../../../../assets/icons/face.png'),
   logo: require('../../../../../assets/icons/logo.png'),
 };

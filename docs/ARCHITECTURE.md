@@ -1,8 +1,9 @@
 # Pockit architecture
 
-Status: Phase 5 (gallery and image picker) complete, plus the lock screen and its Settings toggle
-from Phase 10 (built out of turn: it needs none of Phases 6 to 9), on top of Phase 4 (motion) and
-Phase 3 (the Pockit design, Home, Collections, Collection Detail). This document
+Status: Phases 5 and 6 (gallery, camera and file picking, copied into the vault's own storage)
+complete, plus the lock screen and its Settings toggle from Phase 10 (built out of turn: it needs
+none of Phases 6 to 9), on top of Phase 4 (motion) and Phase 3 (the Pockit design, Home, Collections,
+Collection Detail). This document
 describes the structure as it is and the rules new code follows. Anything under "Not implemented yet"
 is direction, not fact.
 
@@ -126,7 +127,7 @@ README with the rule for that layer.
 | --- | --- | --- |
 | `home` | The main dashboard: search, the collections, Quick Access. | built; a tab |
 | `collections` | Every collection, and one collection's page. | built; a tab |
-| `documents` | Adding, editing, organising and deleting documents. | the add sheet and the image picker; the rest empty |
+| `documents` | Adding, editing, organising and deleting documents. | the add sheet, all three pickers, copying into the vault; no model or save yet |
 | `document-viewer` | Fullscreen native viewing of images and documents. | empty |
 | `search` | Local search across the vault. | placeholder page; a tab |
 | `favorites` | Quick access to starred documents. Reached from Home, not a tab of its own. | empty |
@@ -347,6 +348,15 @@ Cancel there returning to the sheet, still open; Camera asking for the permissio
 real system camera, and a confirmed capture closing the sheet back to Home unchanged; the sheet's
 own Cancel row closing it the same way. Not checked: a granted library, a refused permission with
 `canAskAgain` false, and iOS (no simulator here).
+
+**Phase 6, on the same emulator:** the add sheet's Files row launching the real Android document
+picker; a real file (pushed onto the device for the test) picked, copied by `VaultFiles` into the
+app's own document directory through the real `expo-file-system`, and the sheet closing cleanly
+with nothing in the log. This is also where a real device caught two things no test could: Metro
+would not bundle at all until `@react-native-async-storage/async-storage` was installed alongside
+`expo-file-system` (section 11), and `adb reverse tcp:8081` has to be redone after the emulator
+restarts, or Expo Go mistakes a plain connection failure for a signal to fetch a published update,
+and fails with an unrelated `Failed to download remote update`. Not checked: iOS.
 
 **Phase 10's lock, on the same emulator, with nothing enrolled:** the Settings row correctly reads
 `Biometrics.available()` as false and disables the switch with the explanatory line, rather than
@@ -635,9 +645,11 @@ The first version has no backend, no accounts and no network dependency. All dat
 metadata in a local database, files in app-owned storage, small preferences in key-value storage. The
 app must be fully usable offline, because it always is.
 
-Open decision for Phase 6: whether a picked file is copied into app-owned storage or referenced by its
-original URI. Copying keeps the vault independent of the gallery and of URIs that expire; referencing
-saves space. Decide it before the first document is saved, since it shapes the data model.
+Decided in Phase 6: a picked file is copied into app-owned storage, not referenced by its original
+URI. Copying keeps the vault independent of the gallery and of URIs that expire; referencing would
+have saved space, which the design's documents (photos, IDs, PDFs) are small enough not to need.
+`core/storage/vault-files.ts` (`VaultFiles`) does the copying. Phase 7's document model is what
+gives a copy a name and a row to be found by; until then it is made and not yet claimed.
 
 Out of scope for the first version: any cloud storage, sync, REST API, Firebase, Supabase, NestJS or
 authentication API.
@@ -653,8 +665,8 @@ Not installed yet unless marked; each arrives in its own phase (see `ROADMAP.md`
 | Motion | `Animated` with the native driver, through `AnimatedStyle` (part of `@ng-native/components`) | 4, done |
 | Gestures and per-frame motion | Reanimated worklets and Gesture Handler, when a gesture needs them | 6 to 9, first where one does |
 | Gallery and camera | `expo-image-picker` | 5, installed |
-| Documents and PDFs | `expo-document-picker` | 6 |
-| File storage | `expo-file-system` | 6 |
+| Documents and PDFs | `expo-document-picker` | 6, installed |
+| File storage | `expo-file-system` | 6, installed |
 | Local database | `expo-sqlite` | 7 |
 | Haptics | `expo-haptics` | deferred from 4; with the first real action that wants one |
 | Biometric lock | `expo-local-authentication`, `expo-secure-store` | 10, installed |
@@ -763,10 +775,10 @@ feels right. That needs a device.
 
 ## 16. What is intentionally not implemented yet
 
-The add sheet picks a photo from the gallery or the camera; it goes nowhere. No document picking
-for PDFs and files yet (the sheet's third source waits for `expo-document-picker`); no filesystem,
-no SQLite, no persistence of any kind. No real search, favourites, document viewer or editing; no
-custom collections; no sharing or PDFs. No encryption; no backend. The app can lock itself behind
+The add sheet picks a photo, a camera shot or any file, and copies it into the vault's own storage;
+it still goes nowhere a document model or a database can find it again. No SQLite, no persistence
+of any kind. No real search, favourites, document viewer or editing; no custom collections; no
+sharing. No encryption; no backend. The app can lock itself behind
 biometrics (Phase 10, out of turn), but nothing else of that phase: no screenshot protection, and
 Settings has only the one toggle, not the design's other groups (Appearance, Storage, About).
 Motion is limited to press feedback and screen entrances: no shared-element, scroll or gesture

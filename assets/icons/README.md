@@ -10,7 +10,7 @@ colour in the file does not matter and anything not white would be wrong.
 | `tab-<name>.png` | 24 pt | The Android tab bar, which expects 24 dp. iOS draws SF Symbols instead (`shell/tabs.ts`). |
 
 Icons: `search`, `chevron-right`, `plus`, `shield`, `heart` (filled), `id-card`, `award`, `flag`,
-`camera`, `photos`, `face`, `logo`, and for the tab bar `home`, `layers`, `search`, `sliders`.
+`camera`, `photos`, `files`, `face`, `logo`, and for the tab bar `home`, `layers`, `search`, `sliders`.
 
 ## Source
 
@@ -31,6 +31,7 @@ All icons sit on a 24 x 24 grid, round caps and joins. The path data and stroke 
 | heart | 1.75, filled | `M12 20s-8-4.8-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 9c0 6.2-8 11-8 11z` |
 | camera | 1.75 | `M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z` |
 | photos | 1.75 | `M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM21 15l-5-5L5 21` |
+| files | 1.75 | `M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6` |
 | face | 1.75 | `M7 3H5a2 2 0 0 0-2 2v2M17 3h2a2 2 0 0 1 2 2v2M7 21H5a2 2 0 0 1-2-2v-2M17 21h2a2 2 0 0 0 2-2v-2M9 9v1M15 9v1M12 9v4h-1M9 16c1.5 1.3 4.5 1.3 6 0` |
 | logo | 1.75 | `M4 9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3zM4 12h16M8 7V5h8v2` |
 

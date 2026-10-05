@@ -36,14 +36,39 @@ export class VaultFiles {
   private readonly reader = inject(VaultFiles.SOURCE);
   private readonly fileSystem = inject(FileSystem);
 
-  /** Copies `sourceUri` into `vault/<name>` and returns its new, permanent uri. */
-  async copy(sourceUri: string, name: string): Promise<string> {
+  /**
+   * Copies `sourceUri` into the vault's own storage and returns its new, permanent uri. `hint` is
+   * whatever the picker that found it knows about its name, so the copy keeps a sensible
+   * extension; the copy itself is named freshly, so two picks never collide.
+   */
+  async copy(sourceUri: string, hint: VaultFileHint = {}): Promise<string> {
     if (!this.reader) {
       throw new Error('[pockit] expo-file-system is not installed');
     }
     const bytes = await this.reader.open(sourceUri).bytes();
-    const file = this.fileSystem.document(`vault/${name}`);
+    const file = this.fileSystem.document(`vault/${vaultFileName(hint)}`);
     this.fileSystem.write(file, bytes);
     return file.uri;
   }
+}
+
+/** What a picker knows about a picked asset's name, for the extension alone. */
+export interface VaultFileHint {
+  readonly mimeType?: string | null;
+  readonly originalName?: string | null;
+}
+
+/** A fresh name, so two copies never collide, keeping whatever extension the original had. */
+export function vaultFileName(hint: VaultFileHint): string {
+  const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return `${id}.${extensionOf(hint)}`;
+}
+
+function extensionOf({ mimeType, originalName }: VaultFileHint): string {
+  const fromName = /\.([a-zA-Z0-9]+)$/.exec(originalName ?? '')?.[1];
+  if (fromName) {
+    return fromName.toLowerCase();
+  }
+  const fromMimeType = mimeType?.split('/')[1]?.replace('jpeg', 'jpg');
+  return fromMimeType ?? 'bin';
 }

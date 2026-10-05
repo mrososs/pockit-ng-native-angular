@@ -11,7 +11,7 @@ follows.
 | 3 | **Home, Collections and the Pockit design** (done) | The approved Claude Design as the design system (one TypeScript source, generated stylesheet, bundled fonts and icons); Home in its empty and filled-in states, Collections, and a collection's page with its empty state; the native bars matched to it; checked on an Android emulator. | `expo-font`, `@ng-native/expo` |
 | 4 | **Motion system and native animations** (done) | Motion tokens in the design system (the design's 90 to 280 ms, one curve, spring stiffness 400 damping 30); a press response on every pressable (the touch target never moves); a staggered entrance for Home, a lighter one for Collections and the empty state; native navigation untouched; reduced motion honoured; checked on an Android emulator. Gestures are documented, not built. | nothing: `Animated` and `AnimatedStyle` are in `@ng-native/components` |
 | 5 | **Gallery and image picker** (done) | Pick a photo from the library or take one. The design's add sheet. | `expo-image-picker` |
-| 6 | Document picker and filesystem | Pick PDFs and files; decide copy-vs-reference; store files in app-owned storage. | `expo-document-picker`, `expo-file-system` |
+| 6 | **Document picker and filesystem** (done) | Pick PDFs and files; decide copy-vs-reference; store files in app-owned storage. | `expo-document-picker`, `expo-file-system` |
 | 7 | Local persistence (SQLite) | Collection and document models, schema and migrations, `core/storage`; `VAULT_OVERVIEW` backed by it, which switches Home and Collections to their filled-in states with no screen change. Settle the multi-file document shape first. | `expo-sqlite` |
 | 8 | Search and favourites | Local search across the vault (the design's three search states); favourites and the Quick Access "See all". | |
 | 9 | Document viewer | Fullscreen image and PDF viewing with gestures, presented above the tabs. | |
@@ -59,6 +59,38 @@ follows.
 - **`ImagePicker` and its `capture()`/`pick()` split already existed in `@ng-native/expo`**: it
   answers a cancelled or refused picker as no assets rather than a result to unwrap, and asks for
   the camera permission itself, so the add sheet has no permission handling of its own to write.
+
+## Choices made in Phase 6
+
+- **Copy, not reference.** A referenced URI breaks when the original is deleted from the gallery,
+  and some pickers' URIs expire once the picker closes; a copy keeps the vault independent of both,
+  at the cost of the extra storage the design's documents (photos, IDs, PDFs) are small enough not
+  to make a practical problem. `core/storage/vault-files.ts` (`VaultFiles`) does the copying, into
+  the app's document directory (survives, backed up) under its own `vault/` folder.
+- **All three sources now copy, including Camera and Photos.** The add sheet's `choose()` reads the
+  pick, copies it, and only then dismisses; a cancelled picker *or a copy that fails* both leave the
+  sheet open to try again.
+- **The copy still goes nowhere.** Phase 7 is what gives a copy a name, a collection and a row in
+  the database; until then, a copy made and never claimed by a saved document is storage the app
+  itself cannot find again. Not a leak a user would notice (the app's own sandboxed directory,
+  gone on uninstall), but worth fixing once there is something to fix it with.
+- **`expo-file-system`'s `File`/`Paths` are used directly** (`new expo.File(uri)`) to read an
+  arbitrary source uri the app did not create itself, alongside the `FileSystem` service
+  (`@ng-native/expo`) for the destination; the wrapper's own docstring sanctions this split, since
+  it only decides which directory a name lands in; everything else on a `File` is Expo's own,
+  undocumented twice.
+- **Installing `expo-file-system` pulled in `@react-native-async-storage/async-storage` too**,
+  though nothing in the app uses its `Storage` half: `@ng-native/expo/store.ts` references both
+  native modules unconditionally at the top of the file, so Metro refused to bundle `SecureStorage`
+  (Phase 10) without the other also being installed. Found as a real bundling error, not a guess.
+- **A fresh name for every copy** (`vaultFileName`): a timestamp-and-random id, with whatever
+  extension the picker's own filename or MIME type gives - the original name is not kept, since two
+  picks must never collide and nothing reads it as a path yet.
+- **`adb reverse tcp:8081 tcp:8081` does not survive an emulator restart**, and a stale Metro left
+  running across an `app.json`/`package.json` change can serve a manifest Expo Go then can't
+  reconcile, which surfaces as `Failed to download remote update` - a world away from the actual
+  cause. Restarting the emulator (as happened earlier this session, under memory pressure) means
+  redoing the port forward before the next device check.
 
 ## Choices made in Phase 10 (out of turn)
 
