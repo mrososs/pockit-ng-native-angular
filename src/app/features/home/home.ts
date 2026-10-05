@@ -104,7 +104,7 @@ const HOME_ENTRANCE = { intro: 0, search: 1, lead: 2, rest: 3, quickAccess: 4, a
         @if (favorites().length > 0) {
           <view [animatedStyle]="enter.group(group.quickAccess)">
             <view class="section">
-              <app-section-header title="Quick Access" />
+              <app-section-header title="Quick Access" actionLabel="See all" (action)="openFavorites()" />
             </view>
             <scroll-view
               [horizontal]="true"
@@ -310,6 +310,11 @@ export class Home {
 
   protected openSearch(): void {
     void this.router.navigateByUrl('/search');
+  }
+
+  /** Quick Access's "See all": the same favourites, as the design's own page. */
+  protected openFavorites(): void {
+    void this.nav.push(['/home', 'favorites']);
   }
 
   /** The design's add sheet, as a native bottom sheet over whatever is on screen. */

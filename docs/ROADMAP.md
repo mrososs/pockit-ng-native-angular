@@ -13,7 +13,7 @@ follows.
 | 5 | **Gallery and image picker** (done) | Pick a photo from the library or take one. The design's add sheet. | `expo-image-picker` |
 | 6 | **Document picker and filesystem** (done) | Pick PDFs and files; decide copy-vs-reference; store files in app-owned storage. | `expo-document-picker`, `expo-file-system` |
 | 7 | **Local persistence (SQLite)** (done) | Collection and document models, schema and migrations, `core/storage`; `VAULT_OVERVIEW` backed by it, which switches Home and Collections to their filled-in states with no screen change. Settle the multi-file document shape first. | `expo-sqlite` |
-| 8 | Search and favourites | Local search across the vault (the design's three search states); favourites and the Quick Access "See all". | |
+| 8 | **Search and favourites** (done) | Local search across the vault (the design's three search states); a collection's page showing its own documents; favourites and the Quick Access "See all". Marking a document a favourite is still Phase 9's (the action lives on the document viewer). | |
 | 9 | Document viewer | Fullscreen image and PDF viewing with gestures, presented above the tabs. | |
 | 10 | **Biometrics and security** (lock built, out of turn; rest not started) | Lock on launch and resume (the design's lock screen), secure storage for the lock setting, the Settings screen, optional screenshot protection. | `expo-local-authentication`, `expo-secure-store`, maybe `expo-screen-capture` |
 | 11 | Android production build | Final app identifier and signing, icons and splash, release build, store listing. | EAS configuration |
@@ -123,6 +123,45 @@ follows.
   per-attempt. With it off: Camera → capture → Review (name field correctly starts empty, Phase
   6/7's camera-title fix) → typed "National ID" → Save to Pockit → back on Home with "Personal
   Documents" now showing "1 document".
+
+## Choices made in Phase 8
+
+- **A collection's own page now shows its documents** (the design's screen 04): a two-column grid,
+  `VAULT_OVERVIEW.documentsByCollection`, and the floating add button, in the collection's own
+  accent. This was really the end of Phase 7 - "Collections to their filled-in states" promised a
+  page, not just a count - caught while building Search, which needed the same per-collection data
+  and turned up that `CollectionDetail` had only ever shown its empty state, counts and card peeks
+  notwithstanding.
+- **No search index.** The vault is a handful of documents, not a library: `VAULT_OVERVIEW.documents`
+  (every document, newest first) filtered by a case-insensitive substring match on the title is the
+  whole of it, recomputed on every keystroke. A real index is a problem for a vault this does not
+  have yet.
+- **"Recent" and "Try searching" are not built.** The design's empty search state shows a search
+  history (this app keeps none) and sample terms (the design's own demo content, not real data,
+  per `claude-design-source`). In their place: the three built-in collections, as a shortcut to
+  browse by - real data, reusing `CollectionCard`'s own `compact` row rather than a new component.
+- **A result presses but goes nowhere**, the same as a document card elsewhere in the app today:
+  the document viewer it would open is Phase 9.
+- **A new `.text-accent` modifier** (`theme-css.ts`, alongside `.text-secondary`/`.text-collection`):
+  Quick Access's "See all" and Search's "Cancel" are the single gold accent, not a collection's own
+  tint (`.text-collection` falls back to grey outside a `.collection-<id>` scope, which is exactly
+  where both of these sit). `SectionHeader` gained an optional `actionLabel`/`action` for the same
+  "title row with a trailing link" shape Quick Access and, now, nothing else yet, need.
+- **Favorites (the design's "Quick Access" page, screen 13) reuses the native header**, not the
+  design's custom circular back button and oversized serif title: the same divergence already
+  decided for a collection's own page (`ARCHITECTURE.md`, "Where native differs from the design"),
+  for the same reason. It is real and pushed from Home's "See all", but today always shows its own
+  empty state: nothing can mark a document a favourite yet, since that action lives on the document
+  viewer (Phase 9), which does not exist either. Built now anyway, rather than waited on, because a
+  page that is only ever empty until the next phase is still a real, tested page today (the same
+  reasoning as Phase 6's copies going nowhere until Phase 7 gave them somewhere).
+- **Not yet device-verified.** The emulator and Metro were stopped by the harness's own
+  memory-pressure guard before this phase's screens were built, and were not restarted (the guard's
+  own note says not to, on the chance memory is still short); everything above is covered by the
+  automated suite only. The next device pass should check: Search's browse-by-collection state,
+  typing a query down to the one real document Phase 7 saved on that emulator and its highlight,
+  that document now showing on Personal Documents' own page instead of the empty state, and the
+  floating add button above it.
 
 ## Choices made in Phase 10 (out of turn)
 

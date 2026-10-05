@@ -16,12 +16,18 @@ export interface VaultOverview {
   readonly favorites: readonly DocumentPreview[];
   /** Up to two thumbnails to peek out of a collection's large card. */
   readonly peeks: Readonly<Partial<Record<CollectionId, readonly ThumbnailSource[]>>>;
+  /** Every document, newest first - what Search filters and a collection's page grids. */
+  readonly documents: readonly DocumentPreview[];
+  /** `documents`, grouped by collection, in the same order. */
+  readonly documentsByCollection: Readonly<Partial<Record<CollectionId, readonly DocumentPreview[]>>>;
 }
 
 export const EMPTY_VAULT: VaultOverview = {
   counts: { 'personal-documents': 0, certificates: 0, important: 0 },
   favorites: [],
   peeks: {},
+  documents: [],
+  documentsByCollection: {},
 };
 
 /**

@@ -44,6 +44,9 @@ export class VaultStore {
 function overviewOf(documents: readonly DocumentItem[]): VaultOverview {
   const counts: Record<CollectionId, number> = { 'personal-documents': 0, certificates: 0, important: 0 };
   const peeks: Partial<Record<CollectionId, ThumbnailSource[]>> = {};
+  const documentsByCollection: Partial<Record<CollectionId, DocumentPreview[]>> = {};
+
+  const previews = documents.map((item, index) => toPreview(item, index));
 
   documents.forEach((item, index) => {
     counts[item.collectionId]++;
@@ -51,13 +54,17 @@ function overviewOf(documents: readonly DocumentItem[]): VaultOverview {
     if (peek.length < 2) {
       peek.push({ tone: TONES[index % TONES.length]! });
     }
+    (documentsByCollection[item.collectionId] ??= []).push(previews[index]!);
   });
 
   return {
     counts,
-    // Nothing sets `isFavorite` yet (Phase 8), so this is always empty today - correctly so.
-    favorites: documents.filter((item) => item.isFavorite).map((item, index) => toPreview(item, index)),
+    // Nothing sets `isFavorite` yet - there is no document viewer to hold the action (Phase 9) -
+    // so this is always empty today, correctly so.
+    favorites: previews.filter((preview) => preview.favorite),
     peeks,
+    documents: previews,
+    documentsByCollection,
   };
 }
 
@@ -69,6 +76,7 @@ function toPreview(item: DocumentItem, index: number): DocumentPreview {
     thumbnail: { tone: TONES[index % TONES.length]! },
     badge: item.fileType === 'pdf' ? 'PDF' : undefined,
     favorite: item.isFavorite,
+    collectionId: item.collectionId,
   };
 }
 

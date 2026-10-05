@@ -34,7 +34,6 @@ test('draws a symbol for each tab on iOS', async () => {
 
 test.each([
   ['collections', 'Collections'],
-  ['search', 'Search'],
   ['settings', 'Settings'],
 ])('opens the %s tab on its own page', async (key, title) => {
   const { fabric } = await renderApp();
@@ -43,6 +42,20 @@ test.each([
 
   await waitFor(() =>
     expect(within(tabScreen(fabric, key)).getByRole('header', { name: title })).toBeTruthy(),
+  );
+});
+
+test('opens the search tab on its own page', async () => {
+  // Search has no big page title (the design draws none, screens 07-09): the field itself is the
+  // first thing on the page, so this checks for that instead of a `PageTitle` header.
+  const { fabric } = await renderApp();
+
+  await selectTab(fabric, 'search');
+
+  await waitFor(() =>
+    expect(
+      within(tabScreen(fabric, 'search')).getByPlaceholderText('Search your vault'),
+    ).toBeTruthy(),
   );
 });
 

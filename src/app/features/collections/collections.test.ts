@@ -95,6 +95,26 @@ describe('Collection detail', () => {
     expect(textOf(tabScreen(fabric, 'collections'))).not.toContain('No documents yet');
   });
 
+  test('shows its own documents as a grid, with a floating add button, once it has any', async () => {
+    const { fabric, componentRef } = await renderApp({
+      providers: [{ provide: VAULT_OVERVIEW, useValue: signal(PREVIEW_VAULT).asReadonly() }],
+    });
+
+    await componentRef.injector.get(Router).navigateByUrl('/collections/personal-documents');
+
+    await waitFor(() => expect(headerTitles(fabric.committed)).toContain('Personal Documents'));
+    const detail = within(tabScreen(fabric, 'collections'));
+    expect(detail.queryByRole('header', { name: 'No documents yet' })).toBeNull();
+    // The preview fixture's own count (6) is cosmetic, for the card on Home and here; it only ever
+    // made up 3 actual documents, so the page's own label - this collection's real document list -
+    // says 3, not 6.
+    expect(detail.getByText('3 documents')).toBeTruthy();
+    for (const favorite of PREVIEW_VAULT.favorites) {
+      expect(detail.getByRole('button', { name: `${favorite.title}, ${favorite.kind}` })).toBeTruthy();
+    }
+    expect(detail.getByRole('button', { name: 'Add document' })).toBeTruthy();
+  });
+
   test('has no collection with an id that a path could mistake for another route', () => {
     for (const collection of PREDEFINED_COLLECTIONS) {
       expect(collection.id).toMatch(/^[a-z]+(-[a-z]+)*$/);

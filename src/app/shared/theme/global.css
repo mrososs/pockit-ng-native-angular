@@ -229,6 +229,10 @@
   color: var(--collection-accent, var(--color-text-secondary));
 }
 
+.text-accent {
+  color: var(--color-accent);
+}
+
 .screen {
   flex: 1;
   background-color: var(--color-background);

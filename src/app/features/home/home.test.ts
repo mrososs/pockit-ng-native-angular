@@ -83,6 +83,14 @@ describe('Home with documents', () => {
     expect(visualOf(add).props['width']).toBe(56);
     expect(visualOf(add).props['height']).toBe(56);
   });
+
+  test('Quick Access "See all" opens the favourites page', async () => {
+    const { fabric } = await renderApp({ providers: [withPreviewVault] });
+
+    await userEvent.press(screen.getByRole('button', { name: 'See all' }));
+
+    await waitFor(() => expect(headerTitles(fabric.committed)).toContain('Quick Access'));
+  });
 });
 
 describe('Home navigation', () => {

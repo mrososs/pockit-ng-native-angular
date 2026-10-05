@@ -90,6 +90,7 @@ export function buildGlobalCss(): string {
   block('.text-tertiary', ['color: var(--color-text-tertiary);']);
   block('.text-secondary', ['color: var(--color-text-secondary);']);
   block('.text-collection', ['color: var(--collection-accent, var(--color-text-secondary));']);
+  block('.text-accent', ['color: var(--color-accent);']);
 
   // The host of a routed page is its native screen, which paints nothing by itself.
   block('.screen', ['flex: 1;', 'background-color: var(--color-background);']);

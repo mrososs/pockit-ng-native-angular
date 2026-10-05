@@ -296,15 +296,14 @@ reaching Android native crashes, so `Tabs` injects the engine and converts each 
 
 | Design | Native | What the app does |
 | --- | --- | --- |
-| Circular back and "more" buttons and a centred title on the collection page | The platform header: a back arrow, and a title left-aligned on Android | The native header, styled with the design's colours and font. No custom header is built. The "more" button waits for a menu to put behind it. |
+| Circular back and "more" buttons and a centred title on a collection's and Favorites' pages | The platform header: a back arrow, and a title left-aligned on Android | The native header, styled with the design's colours and font. No custom header is built. The "more" button waits for a menu to put behind it. |
 | A hairline above the tab bar | Android's bottom navigation has no such prop | Drawn on iOS (`tabBarShadowColor`); absent on Android. |
 | A dashed outline on the "add" tile in the first-run hero | Android draws a dashed border solid | `border-style: dashed` is set and iOS honours it; Android shows the outline solid. Intent kept. |
 | iOS tab icons as the design's glyphs | iOS tab icons are SF Symbols by default | SF Symbols, the closest to each glyph (`house`, `square.stack.3d.up`, `magnifyingglass`, `slider.horizontal.3`). Android uses the design's own glyphs. Not checked on iOS. |
 | 390-point frames with fixed card heights | Phones from 360 dp up | Card heights are minimums, so a card grows when its title wraps or the system font is larger; the primary card's text wraps before it reaches the thumbnails. |
 | Six collections, a "New collection" tile and a header "+" on Collections | Custom collections are not in scope | The three built-in collections only, and no tile or button that does nothing. They come with the feature. |
-| A "See all" link on Quick Access | There is no Favourites screen yet | Omitted until there is somewhere for it to go. |
+| Search's "Recent" (a search history) and "Try searching" (sample terms) | Neither is real data: this app keeps no search history, and the terms are the design's own demo content | The built-in collections instead, as a browse-by shortcut, reusing `CollectionCard`'s `compact` row. |
 | Press: scale 0.97 with a spring, and a light haptic | Motion is built; haptics need a native module | Scale and fade with a spring or an ease, per role (section 8). No haptic yet: it comes with `expo-haptics`. |
-| Collection counts of 6, 4 and 3 | The vault is empty | Home shows the design's "new user" state. The filled-in state is built and tested, and visible with the dev preview. |
 
 ### What was checked, and how
 
@@ -357,6 +356,19 @@ would not bundle at all until `@react-native-async-storage/async-storage` was in
 `expo-file-system` (section 11), and `adb reverse tcp:8081` has to be redone after the emulator
 restarts, or Expo Go mistakes a plain connection failure for a signal to fetch a published update,
 and fails with an unrelated `Failed to download remote update`. Not checked: iOS.
+
+**Phase 7, on the same emulator:** Camera capturing a photo, copied into the vault, Review showing
+the thumbnail with an empty name field (a capture's generated filename is not suggested as a title),
+a typed name and "Save to Pockit" returning to Home with Personal Documents now reading "1 document"
+instead of empty. This is also where the emulator's own first-boot "Try out your stylus" tutorial
+surfaced: it steals focus and typed text from whatever field is under it, is not dismissed by a
+single tap on its own buttons, and recurs on every new text field focus until the device setting
+that shows it (`stylus_handwriting_enabled`) is turned off, after which it does not return. Not
+checked: iOS.
+
+**Phase 8 is not yet device-checked.** The emulator and Metro were stopped by the harness's own
+memory-pressure guard before this phase was built; the "Choices made in Phase 8" section of
+`ROADMAP.md` has what the next pass should look at.
 
 **Phase 10's lock, on the same emulator, with nothing enrolled:** the Settings row correctly reads
 `Biometrics.available()` as false and disables the switch with the explanatory line, rather than

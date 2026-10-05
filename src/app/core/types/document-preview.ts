@@ -1,3 +1,5 @@
+import type { CollectionId } from './collection.ts';
+
 /**
  * What a thumbnail shows. Today only the design's placeholder artwork exists, named by its tone.
  * When documents carry real images this gains a `{ uri }` alternative and the artwork becomes the
@@ -20,4 +22,6 @@ export interface DocumentPreview {
   /** A short label on the thumbnail: "2 pages", "PDF". */
   readonly badge?: string;
   readonly favorite: boolean;
+  /** Which collection it belongs to: a search result's own line, a collection page's own grid. */
+  readonly collectionId: CollectionId;
 }
