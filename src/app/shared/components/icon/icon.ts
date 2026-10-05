@@ -16,7 +16,9 @@ export type IconName =
   | 'face'
   | 'logo'
   | 'close'
-  | 'share';
+  | 'share'
+  | 'edit'
+  | 'more';
 
 const SOURCES: Record<IconName, ImageSource> = {
   'id-card': require('../../../../../assets/icons/id-card.png'),
@@ -34,6 +36,8 @@ const SOURCES: Record<IconName, ImageSource> = {
   logo: require('../../../../../assets/icons/logo.png'),
   close: require('../../../../../assets/icons/close.png'),
   share: require('../../../../../assets/icons/share.png'),
+  edit: require('../../../../../assets/icons/edit.png'),
+  more: require('../../../../../assets/icons/more.png'),
 };
 
 /**

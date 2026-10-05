@@ -10,8 +10,8 @@ colour in the file does not matter and anything not white would be wrong.
 | `tab-<name>.png` | 24 pt | The Android tab bar, which expects 24 dp. iOS draws SF Symbols instead (`shell/tabs.ts`). |
 
 Icons: `search`, `chevron-right`, `plus`, `shield`, `heart` (filled), `id-card`, `award`, `flag`,
-`camera`, `photos`, `files`, `face`, `logo`, `close`, `share`, and for the tab bar `home`, `layers`,
-`search`, `sliders`.
+`camera`, `photos`, `files`, `face`, `logo`, `close`, `share`, `edit`, `more`, and for the tab bar
+`home`, `layers`, `search`, `sliders`.
 
 ## Source
 
@@ -37,6 +37,8 @@ All icons sit on a 24 x 24 grid, round caps and joins. The path data and stroke 
 | logo | 1.75 | `M4 9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3zM4 12h16M8 7V5h8v2` |
 | close | 1.75 | `M6 6l12 12M18 6 6 18` |
 | share | 1.75 | `M12 3v13M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5` |
+| edit | 1.75 | `M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z` |
+| more | 1.75 | `M5 12h.01M12 12h.01M19 12h.01` |
 
 They were rasterised from this data with a throwaway script that is not kept. To add an icon, draw it
 to the same convention (or rasterise its path the same way), add the three densities here, then add

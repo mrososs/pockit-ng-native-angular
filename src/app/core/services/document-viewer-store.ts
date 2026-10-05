@@ -29,6 +29,11 @@ export class DocumentViewerStore {
     void this.nav.present(['/document'], { as: 'fullScreenModal' });
   }
 
+  /** After "Edit" (Phase 11) saves: the viewer's own displayed copy, without re-presenting. */
+  replace(preview: DocumentPreview): void {
+    this.state.set(preview);
+  }
+
   clear(): void {
     this.state.set(null);
   }

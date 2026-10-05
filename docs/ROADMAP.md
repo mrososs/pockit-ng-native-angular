@@ -16,7 +16,8 @@ follows.
 | 8 | **Search and favourites** (done) | Local search across the vault (the design's three search states); a collection's page showing its own documents; favourites and the Quick Access "See all". Marking a document a favourite is still Phase 9's (the action lives on the document viewer). | |
 | 9 | **Document viewer** (done) | Fullscreen image viewing with gestures (pinch, double tap, swipe down to close), presented above the tabs; favouriting and sharing, finally wired to the action everywhere a document card already pressed. A PDF opens the system share sheet instead of rendering in the app. | `react-native-reanimated`, `react-native-worklets`, `react-native-gesture-handler`, `expo-sharing` |
 | 10 | **Biometrics and security** (lock built, out of turn; rest not started) | Lock on launch and resume (the design's lock screen), secure storage for the lock setting, the Settings screen, optional screenshot protection. | `expo-local-authentication`, `expo-secure-store`, maybe `expo-screen-capture` |
-| 11 | Android production build | Final app identifier and signing, icons and splash, release build, store listing. | EAS configuration |
+| 11 | Document management | Rename a document, move it to another collection, delete it - the viewer's own "Edit" and "More" actions, inert since Phase 9 because neither had anywhere to go. Not a photo or PDF editor: the file itself is never re-touched, only its name and collection. | nothing |
+| 12 | Android production build | Final app identifier and signing, icons and splash, release build, store listing. | EAS configuration |
 
 ## Choices made in Phase 3
 
@@ -59,6 +60,15 @@ follows.
 - **`ImagePicker` and its `capture()`/`pick()` split already existed in `@ng-native/expo`**: it
   answers a cancelled or refused picker as no assets rather than a result to unwrap, and asks for
   the camera permission itself, so the add sheet has no permission handling of its own to write.
+- **`addSheetPresentation.detent`, raised from 0.42 to 0.55 after a real device caught it.** The
+  detent is a fraction of the *screen*; the sheet's content (the title, three rows, Cancel) is a
+  fixed height in points. 0.42 was a near-exact fit on a tall, gesture-navigation emulator; on a
+  shorter phone, whose 3-button navigation also eats more of the bottom safe area than gesture
+  navigation does, the same fraction left too few points and the bottom of the sheet - Cancel -
+  ran past its own edge. 0.55 gives real margin on a short phone without the sheet reading as
+  nearly full-screen on a tall one. `add-sheet.ts`'s content is also now in a `scroll-view`, a
+  second, independent safety net: free where everything already fits (it simply never scrolls),
+  and the one place content can still be reached on whatever device 0.55 still is not enough for.
 
 ## Choices made in Phase 6
 
@@ -256,6 +266,42 @@ there is still no document to view or store, only the app to get into.
 - **The design's two faint decorative rings behind the lock screen's badge are not built.** Pure
   ambiance with its own two one-off accent-opacity values; not worth two new colour tokens for a
   single screen.
+
+## Choices made in Phase 11
+
+Added at the user's own request, once Phase 9's viewer made "Edit" and "More" real buttons with
+nowhere to go the obvious next gap to close.
+
+- **Metadata only: a name and a collection, never the file.** Confirmed directly rather than
+  assumed - the ask was "rename + delete, and maybe move-to-collection", and asking back ("editing
+  the document's metadata... or re-editing the actual image/file itself?") settled it before any
+  code was written. There is no photo or PDF editor here and none is planned; `ARCHITECTURE.md`'s
+  "not implemented yet" list says so plainly, so a later phase does not have to rediscover it.
+- **`DocumentsRepository.update`/`.remove` and `VaultStore.update`/`.remove`**, the same one-method-
+  per-change shape `setFavorite` (Phase 9) already set: an explicit `{ title, collectionId }` or an
+  id, never "whatever the screen already had," so a stale read can never write back a stale value.
+- **"Edit" is a screen, pushed over the viewer the same way Review is pushed over the add sheet**
+  (`DocumentEdit`, closely mirroring Review's own name-field-and-collection-picker shape, since it
+  is the same two pieces of information asked the same way) - not a modal or an inline form, both
+  of which would have needed building a second way to ask the same question. "More" needed no
+  screen of its own: with exactly one action behind it (Delete), it goes straight to a destructive
+  `Dialogs.confirm`, not a menu with one item in it.
+- **The viewer's title is now read from `DocumentViewerStore` reactively (`title()`), not the
+  one-time snapshot (`item`) every other field still is.** Renaming or moving a document never
+  changes its `id`, `fileUri` or `fileType`, so the gesture closures, `share()` and `deleteDocument()`
+  keep the plain snapshot; only the displayed name needed to change after `DocumentEdit` pops back
+  to a viewer that never remounted. `DocumentViewerStore.replace()` is what `DocumentEdit` calls on
+  a successful save to make that true.
+- **Two new icons, `edit` and `more`, rasterised from the design's own SVG paths** (a pencil; three
+  dots) the same way as every other icon - except the tool that usually does this (Chrome DevTools,
+  driving a canvas) was unavailable mid-session, so this once a temporary devDependency
+  (`@resvg/resvg-js`) rendered the same path data to PNG directly in Node and was removed again
+  immediately after; nothing about the committed assets or the process going forward differs.
+- **A real device, again.** The user found the add sheet's clipped Cancel (above) and asked for this
+  phase from their own phone, mid-session - not the emulator, and not a scenario this project's own
+  device-verification pass had reached yet. Not yet re-verified on that same phone after the fixes
+  in this phase; the next pass should confirm the sheet now shows everything without scrolling, and
+  that Edit, the collection picker, Save and Delete all work on a real document.
 
 ## Open items
 

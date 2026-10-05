@@ -1,8 +1,11 @@
+import type { Provider } from '@angular/core';
+import { Dialogs, type NativeDialogs } from '@ng-native/device';
 import { type FakeFabric, gestureOf, screen, userEvent, waitFor } from '@ng-native/testing';
 import { describe, expect, test, vi } from 'vitest';
 import { DocumentViewerStore } from '../../core/services/document-viewer-store.ts';
 import { Sharing } from '../../core/services/sharing.ts';
 import { VaultStore } from '../../core/services/vault-store.ts';
+import { VaultFiles } from '../../core/storage/vault-files.ts';
 import type { DocumentPreview } from '../../core/types/document-preview.ts';
 import { renderApp } from '../../testing/render.ts';
 import { named } from '../../testing/tree.ts';
@@ -43,6 +46,14 @@ function scaleOf(fabric: FakeFabric): number | undefined {
   return transform?.find((entry) => 'scale' in entry)?.scale;
 }
 
+/** `confirm()` goes through `alert`; picking `index` presses that button (0 cancel, 1 confirm). */
+function fakeDialogs(index: number): NativeDialogs {
+  return {
+    platform: 'android',
+    alert: (_title, _message, buttons) => void buttons[index]?.onPress?.(),
+  };
+}
+
 function fakeSharing() {
   const shared: string[] = [];
   return {
@@ -81,9 +92,9 @@ describe('DocumentViewerStore', () => {
 });
 
 describe('DocumentViewer', () => {
-  async function openViewer(preview: DocumentPreview = image) {
+  async function openViewer(preview: DocumentPreview = image, extraProviders: readonly Provider[] = []) {
     const { shared, provider } = fakeSharing();
-    const result = await renderApp({ providers: [provider] });
+    const result = await renderApp({ providers: [provider, ...extraProviders] });
     result.componentRef.injector.get(DocumentViewerStore).open(preview);
     await waitFor(() => expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy());
     return { ...result, shared };
@@ -155,5 +166,46 @@ describe('DocumentViewer', () => {
 
     doubleTap.callbacks['onEnd']!({} as never);
     await waitFor(() => expect(scaleOf(fabric)).toBe(1));
+  });
+
+  test('Edit opens the edit screen, and a saved rename shows once back on top', async () => {
+    const { componentRef } = await openViewer();
+    vi.spyOn(componentRef.injector.get(VaultStore), 'update').mockResolvedValue();
+
+    await userEvent.press(screen.getByRole('button', { name: 'Edit' }));
+    await waitFor(() => expect(screen.getByRole('header', { name: 'Edit Document' })).toBeTruthy());
+
+    await userEvent.type(screen.getByDisplayValue('National ID'), ' (renewed)');
+    await userEvent.press(screen.getByRole('button', { name: 'Save changes' }));
+
+    await waitFor(() => expect(screen.getByText('National ID (renewed)')).toBeTruthy());
+  });
+
+  test('More asks before deleting, and does nothing if declined', async () => {
+    const deleted: string[] = [];
+    await openViewer(image, [
+      { provide: Dialogs.SOURCE, useValue: fakeDialogs(0) },
+      { provide: VaultFiles.SOURCE, useValue: { open: (uri: string) => ({ delete: () => deleted.push(uri) }) } },
+    ]);
+
+    await userEvent.press(screen.getByRole('button', { name: 'More' }));
+
+    expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy();
+    expect(deleted).toEqual([]);
+  });
+
+  test('More, confirmed, removes the document and the vault file, and closes', async () => {
+    const deleted: string[] = [];
+    const { componentRef } = await openViewer(image, [
+      { provide: Dialogs.SOURCE, useValue: fakeDialogs(1) },
+      { provide: VaultFiles.SOURCE, useValue: { open: (uri: string) => ({ delete: () => deleted.push(uri) }) } },
+    ]);
+    const remove = vi.spyOn(componentRef.injector.get(VaultStore), 'remove').mockResolvedValue();
+
+    await userEvent.press(screen.getByRole('button', { name: 'More' }));
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Close' })).toBeNull());
+    expect(remove).toHaveBeenCalledWith(image.id);
+    expect(deleted).toEqual([image.fileUri]);
   });
 });

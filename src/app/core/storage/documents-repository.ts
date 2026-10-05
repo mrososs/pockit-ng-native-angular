@@ -87,4 +87,21 @@ export class DocumentsRepository {
       id,
     ]);
   }
+
+  /** Renames a document and/or moves it to another collection. The viewer's own "Edit" (Phase 11). */
+  async update(id: string, changes: { readonly title: string; readonly collectionId: CollectionId }): Promise<void> {
+    const db = await this.database.ready();
+    await db.runAsync('UPDATE document SET title = ?, collection_id = ?, updated_at = ? WHERE id = ?', [
+      changes.title,
+      changes.collectionId,
+      Date.now(),
+      id,
+    ]);
+  }
+
+  /** Deletes a document's row. The vault file itself is a separate concern (`VaultFiles`). */
+  async remove(id: string): Promise<void> {
+    const db = await this.database.ready();
+    await db.runAsync('DELETE FROM document WHERE id = ?', [id]);
+  }
 }

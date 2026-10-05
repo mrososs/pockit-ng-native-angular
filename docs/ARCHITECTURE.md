@@ -820,15 +820,14 @@ feels right. That needs a device.
 
 ## 16. What is intentionally not implemented yet
 
-Persistence, search, favourites, a document viewer and sharing are all real now (Phases 7-9); what
-is still not built:
+Persistence, search, favourites, a document viewer, sharing, and renaming, moving and deleting a
+document are all real now (Phases 7-11); what is still not built:
 
 - **Multi-page documents.** A document is one file (`core/types/document-item.ts`'s own docstring);
   Review's "Add another page" and the viewer's page dots and second-page peek have nowhere to read a
   second file from. Custom collections are not in scope either - the three built-in ones only.
-- **Editing.** No document can be renamed, moved to another collection or deleted once saved; the
-  document viewer's "Edit" and "More" actions are not built, for the same reason a dead button never
-  is here - neither has an editor or a menu to open yet.
+- **A photo or PDF editor.** The document viewer's "Edit" (Phase 11) changes a document's name and
+  collection, never the file itself: there is no crop, rotate or markup tool, and none is planned.
 - **A PDF viewer.** A PDF opens the system share sheet instead of rendering in the app (Phase 9's
   "Where native differs from the design", section 7 of this file).
 - **No encryption; no backend; no accounts; no sync.** Section 10's local-first direction, unchanged.
@@ -838,7 +837,7 @@ is still not built:
 - **Haptics**, and any motion beyond press feedback, screen entrances and the document viewer's
   gestures (Phase 9): no shared-element transition (the "thumbnail expands to viewer" row of the
   table above), no scroll-linked motion.
-- **Android production build settings** (Phase 11): app identifiers, signing, real branding assets.
+- **Android production build settings** (Phase 12): app identifiers, signing, real branding assets.
 
 The schema these phases settled is `core/storage/pockit-database.ts` (the `document` table) and
 `core/types/document-item.ts`/`document-preview.ts` (`DocumentItem`, the stored shape;

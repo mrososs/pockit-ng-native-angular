@@ -4,11 +4,14 @@ import { Image, Pressable, SafeAreaView, Text, View } from '@ng-native/component
 import { AnimatedStyle } from '@ng-native/components/animations';
 import { NativeGesture } from '@ng-native/components/gestures';
 import { sharedValue, workletStyle, WorkletStyle } from '@ng-native/components/reanimated';
+import { Dialogs } from '@ng-native/device';
+import { NativeNavigation } from '@ng-native/router';
 import { Gesture } from 'react-native-gesture-handler';
 import { runOnJS, withTiming } from 'react-native-reanimated';
 import { DocumentViewerStore } from '../../core/services/document-viewer-store.ts';
 import { Sharing } from '../../core/services/sharing.ts';
 import { VaultStore } from '../../core/services/vault-store.ts';
+import { VaultFiles } from '../../core/storage/vault-files.ts';
 import { Icon } from '../../shared/components/icon/icon.ts';
 import { pressMotion } from '../../shared/motion/press-motion.ts';
 import { motion } from '../../shared/theme/theme.ts';
@@ -46,7 +49,7 @@ import { motion } from '../../shared/theme/theme.ts';
           </view>
         </pressable>
         <view class="titleBlock">
-          <text class="text-label" [numberOfLines]="1">{{ item.title }}</text>
+          <text class="text-label" [numberOfLines]="1">{{ title() }}</text>
           <text class="text-caption text-tertiary">{{ item.kind }}</text>
         </view>
         <view class="headSpacer"></view>
@@ -83,6 +86,34 @@ import { motion } from '../../shared/theme/theme.ts';
               <app-icon name="share" [size]="24" class="onDark" />
             </view>
             <text class="text-caption text-tertiary">Share</text>
+          </view>
+        </pressable>
+        <pressable
+          accessibilityRole="button"
+          [accessibilityLabel]="'Edit'"
+          (pressIn)="editPress.in()"
+          (pressOut)="editPress.out()"
+          (press)="openEdit()"
+        >
+          <view class="action" [animatedStyle]="editPress.style">
+            <view class="actionTile">
+              <app-icon name="edit" [size]="24" class="onDark" />
+            </view>
+            <text class="text-caption text-tertiary">Edit</text>
+          </view>
+        </pressable>
+        <pressable
+          accessibilityRole="button"
+          [accessibilityLabel]="'More'"
+          (pressIn)="morePress.in()"
+          (pressOut)="morePress.out()"
+          (press)="deleteDocument()"
+        >
+          <view class="action" [animatedStyle]="morePress.style">
+            <view class="actionTile">
+              <app-icon name="more" [size]="24" class="onDark" />
+            </view>
+            <text class="text-caption text-tertiary">More</text>
           </view>
         </pressable>
       </view>
@@ -129,8 +160,8 @@ import { motion } from '../../shared/theme/theme.ts';
     }
     .actions {
       flex-direction: row;
-      justify-content: center;
-      gap: var(--space-3xl);
+      justify-content: space-between;
+      padding: 0 var(--space-xl);
       padding-bottom: var(--space-xl);
     }
     .action {
@@ -155,17 +186,27 @@ import { motion } from '../../shared/theme/theme.ts';
 })
 export class DocumentViewer {
   private readonly location = inject(Location);
+  private readonly nav = inject(NativeNavigation);
+  private readonly dialogs = inject(Dialogs);
   private readonly documentStore = inject(DocumentViewerStore);
   private readonly vaultStore = inject(VaultStore);
+  private readonly vaultFiles = inject(VaultFiles);
   private readonly sharing = inject(Sharing);
 
-  /** Set by whatever opened the viewer, immediately before presenting it; always present by then. */
+  /** Set by whatever opened the viewer, immediately before presenting it; always present by then.
+   * Stable identity only (`id`, `fileUri`, `fileType`): renaming or moving never changes these, so
+   * the gesture closures and the share/delete actions can close over this once. The title shown is
+   * read from the store instead (`title()`), so "Edit" (Phase 11) replacing it there is reflected
+   * the moment this screen is back on top, with no need to re-fetch or re-snapshot anything. */
   protected readonly item = this.documentStore.current()!;
+  protected readonly title = computed(() => this.documentStore.current()?.title ?? this.item.title);
   protected readonly favorite = signal(this.item.favorite);
 
   protected readonly press = pressMotion('round');
   protected readonly favoritePress = pressMotion('control');
   protected readonly sharePress = pressMotion('control');
+  protected readonly editPress = pressMotion('control');
+  protected readonly morePress = pressMotion('control');
 
   private readonly scale = sharedValue<number>(motion.viewer.minScale);
   private readonly savedScale = sharedValue<number>(motion.viewer.minScale);
@@ -278,5 +319,25 @@ export class DocumentViewer {
 
   protected share(): void {
     void this.sharing.share(this.item.fileUri);
+  }
+
+  /** "Edit" (Phase 11): pushed over this screen, the same way Review is pushed over the add sheet. */
+  protected openEdit(): void {
+    void this.nav.push(['/document-edit']);
+  }
+
+  /** "More" (Phase 11): the one thing behind it today is deleting the document outright. */
+  protected async deleteDocument(): Promise<void> {
+    const confirmed = await this.dialogs.confirm('Delete this document?', {
+      message: 'This cannot be undone.',
+      confirm: 'Delete',
+      destructive: true,
+    });
+    if (!confirmed) {
+      return;
+    }
+    this.vaultFiles.remove(this.item.fileUri);
+    await this.vaultStore.remove(this.item.id);
+    this.close();
   }
 }

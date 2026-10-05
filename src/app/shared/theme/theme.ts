@@ -241,5 +241,14 @@ export type EnterIntensity = keyof typeof motion.enter;
  * How the add sheet opens: a native `formSheet`, sized to its own content and dimming what is
  * behind it, rather than a hand-built overlay. Not part of the CSS radius scale: these are props
  * on the native sheet (`NativeNavigation.present`), not a stylesheet.
+ *
+ * `detent` is a fraction of the *screen*, but the sheet's content (the title, three source rows
+ * and Cancel) is a fixed height in points, so the same fraction is fewer points on a shorter
+ * screen or one whose 3-button navigation eats more of the bottom safe area than gesture
+ * navigation does - a real device caught this at 0.42, which fit a tall, gesture-nav emulator
+ * with nothing to spare and clipped Cancel on a shorter, 3-button-nav phone. 0.55 gives the
+ * content real margin on a short phone without the sheet reading as nearly full-screen on a
+ * tall one; `add-sheet.ts`'s own scroll view is the remaining safety net, for whatever device
+ * this still is not enough for.
  */
-export const addSheetPresentation = { cornerRadius: 28, detent: 0.42 } as const;
+export const addSheetPresentation = { cornerRadius: 28, detent: 0.55 } as const;

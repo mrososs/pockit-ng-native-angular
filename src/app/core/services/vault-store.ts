@@ -45,6 +45,19 @@ export class VaultStore {
     await this.repository.setFavorite(id, favorite);
     await this.refresh();
   }
+
+  /** The viewer's "Edit" (Phase 11): renames a document and/or moves it, then refreshes. */
+  async update(id: string, changes: { readonly title: string; readonly collectionId: CollectionId }): Promise<void> {
+    await this.repository.update(id, changes);
+    await this.refresh();
+  }
+
+  /** The viewer's "More" (Phase 11): deletes a document's row, then refreshes. The vault file
+   * itself is the caller's: `VaultFiles.remove`, the same split `Review`'s own cancel makes. */
+  async remove(id: string): Promise<void> {
+    await this.repository.remove(id);
+    await this.refresh();
+  }
 }
 
 function overviewOf(documents: readonly DocumentItem[]): VaultOverview {
@@ -65,8 +78,6 @@ function overviewOf(documents: readonly DocumentItem[]): VaultOverview {
 
   return {
     counts,
-    // Nothing sets `isFavorite` yet - there is no document viewer to hold the action (Phase 9) -
-    // so this is always empty today, correctly so.
     favorites: previews.filter((preview) => preview.favorite),
     peeks,
     documents: previews,

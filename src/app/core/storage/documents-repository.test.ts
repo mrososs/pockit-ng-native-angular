@@ -62,4 +62,42 @@ describe('DocumentsRepository', () => {
     await repository.setFavorite(document.id, false);
     expect((await repository.list())[0]).toMatchObject({ id: document.id, isFavorite: false });
   });
+
+  test('renames a document and moves it to another collection', async () => {
+    const { componentRef } = await renderApp({
+      providers: [{ provide: POCKIT_DATABASE, useValue: fakeDatabase() }],
+    });
+    const repository = componentRef.injector.get(DocumentsRepository);
+    const document = await repository.insert({
+      title: 'Passport',
+      collectionId: 'personal-documents',
+      fileType: 'image',
+      fileUri: 'file://vault/a.jpg',
+    });
+
+    await repository.update(document.id, { title: 'Old Passport', collectionId: 'important' });
+
+    expect((await repository.list())[0]).toMatchObject({
+      id: document.id,
+      title: 'Old Passport',
+      collectionId: 'important',
+    });
+  });
+
+  test('removes a document', async () => {
+    const { componentRef } = await renderApp({
+      providers: [{ provide: POCKIT_DATABASE, useValue: fakeDatabase() }],
+    });
+    const repository = componentRef.injector.get(DocumentsRepository);
+    const document = await repository.insert({
+      title: 'Passport',
+      collectionId: 'personal-documents',
+      fileType: 'image',
+      fileUri: 'file://vault/a.jpg',
+    });
+
+    await repository.remove(document.id);
+
+    expect(await repository.list()).toEqual([]);
+  });
 });

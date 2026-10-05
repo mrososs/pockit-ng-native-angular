@@ -1,6 +1,6 @@
 import { Location } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { Pressable, SafeAreaView, Text, View } from '@ng-native/components';
+import { Pressable, SafeAreaView, ScrollView, Text, View } from '@ng-native/components';
 import { AnimatedStyle } from '@ng-native/components/animations';
 import { DocumentPicker } from '@ng-native/expo/document-picker';
 import { ImagePicker } from '@ng-native/expo/image-picker';
@@ -32,31 +32,35 @@ interface AddSource {
  */
 @Component({
   selector: 'app-add-sheet',
-  imports: [AddSourceRow, AnimatedStyle, Pressable, SafeAreaView, Text, View],
+  imports: [AddSourceRow, AnimatedStyle, Pressable, SafeAreaView, ScrollView, Text, View],
   template: `
     <safe-area-view [edges]="['bottom']" class="sheet">
-      <text accessibilityRole="header" class="text-heading title">Add to Pockit</text>
-      <view class="sources">
-        @for (source of sources; track source.id) {
-          <app-add-source-row
-            [icon]="source.icon"
-            [title]="source.title"
-            [subtitle]="source.subtitle"
-            (select)="choose(source.id)"
-          />
-        }
-      </view>
-      <pressable
-        accessibilityRole="button"
-        [accessibilityLabel]="'Cancel'"
-        (pressIn)="press.in()"
-        (pressOut)="press.out()"
-        (press)="dismiss()"
-      >
-        <view class="cancel" [animatedStyle]="press.style">
-          <text class="text-label text-secondary">Cancel</text>
+      <scroll-view [showsVerticalScrollIndicator]="false" class="fill">
+        <view class="content">
+          <text accessibilityRole="header" class="text-heading title">Add to Pockit</text>
+          <view class="sources">
+            @for (source of sources; track source.id) {
+              <app-add-source-row
+                [icon]="source.icon"
+                [title]="source.title"
+                [subtitle]="source.subtitle"
+                (select)="choose(source.id)"
+              />
+            }
+          </view>
+          <pressable
+            accessibilityRole="button"
+            [accessibilityLabel]="'Cancel'"
+            (pressIn)="press.in()"
+            (pressOut)="press.out()"
+            (press)="dismiss()"
+          >
+            <view class="cancel" [animatedStyle]="press.style">
+              <text class="text-label text-secondary">Cancel</text>
+            </view>
+          </pressable>
         </view>
-      </pressable>
+      </scroll-view>
     </safe-area-view>
   `,
   styles: `
@@ -64,8 +68,23 @@ interface AddSource {
        the native presentation, not CSS), so it is the surface colour, not the app's deep ground. */
     .sheet {
       flex: 1;
-      padding: var(--space-sm) var(--space-xl) 0;
       background-color: var(--color-surface);
+    }
+    .fill {
+      flex: 1;
+    }
+    /*
+     * A fixed-fraction detent (addSheetPresentation.detent) is a fraction of the SCREEN, but
+     * this content's height is fixed in points; on a shorter screen, or one whose 3-button nav
+     * bar eats more of the bottom safe area than a gesture-nav device's does, the same fraction
+     * is fewer points and Cancel can run past the sheet's own bottom edge. A device with
+     * 3-button navigation and a shorter screen than the one this was checked on is exactly where
+     * that was caught: the sheet clipped Cancel instead of scrolling to it. A scroll view costs
+     * nothing where everything already fits (its content is shorter than the viewport, so it
+     * never actually scrolls) and is the one place content can still be reached where it does not.
+     */
+    .content {
+      padding: var(--space-sm) var(--space-xl) var(--space-lg);
     }
     .title {
       margin-bottom: var(--space-lg);
